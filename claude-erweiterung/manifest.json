@@ -1,0 +1,34 @@
+{
+  "manifest_version": "0.3",
+  "name": "abos",
+  "display_name": "Abos",
+  "version": "1.0.0",
+  "description": "Verbindet Claude mit der Mac-App „Abos“: Abos und Versicherungen auflisten, anlegen, ändern und Sparpotenziale finden. Alles bleibt lokal auf deinem Mac.",
+  "long_description": "Claude greift über einen lokalen Server auf die Abos-App zu, die auf deinem Mac installiert sein muss. Es gibt kein Konto und keinen Server im Internet; die Daten liegen nur in der App. Löschen ist bewusst nur in der App selbst möglich.",
+  "author": {
+    "name": "Julian Dressler"
+  },
+  "icon": "icon.png",
+  "server": {
+    "type": "binary",
+    "entry_point": "server/start.sh",
+    "mcp_config": {
+      "command": "/bin/sh",
+      "args": ["${__dirname}/server/start.sh"],
+      "env": {}
+    }
+  },
+  "tools": [
+    { "name": "abos_auflisten", "description": "Abos und Versicherungen mit Kosten und Kündigungsfrist auflisten" },
+    { "name": "abo_details", "description": "Alle Angaben zu einem Abo, inklusive Kündigungsverlauf" },
+    { "name": "auswertung", "description": "Kosten nach Kategorie, teuerste Abos, anstehende Fristen und Ersparnis" },
+    { "name": "abo_anlegen", "description": "Ein neues Abo oder eine neue Versicherung anlegen" },
+    { "name": "abo_aendern", "description": "Angaben eines Abos ändern, als gekündigt markieren oder reaktivieren" }
+  ],
+  "keywords": ["abos", "abonnements", "versicherungen", "kündigung", "finanzen"],
+  "license": "MIT",
+  "compatibility": {
+    "claude_desktop": ">=0.10.0",
+    "platforms": ["darwin"]
+  }
+}

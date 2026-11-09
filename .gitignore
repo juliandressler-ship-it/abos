@@ -1,0 +1,12 @@
+# macOS
+.DS_Store
+
+# Xcode
+build/
+DerivedData/
+xcuserdata/
+*.xcuserstate
+*.xcscmblueprint
+
+# Download-Dateien entstehen mit „Release bauen.command“ und kommen ins GitHub-Release, nicht ins Repository
+Release/

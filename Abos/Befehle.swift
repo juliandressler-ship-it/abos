@@ -1,0 +1,183 @@
+import AppKit
+import SwiftUI
+
+// MARK: - Fokus wie in anderen Mac-Apps
+
+/// Ein Klick neben ein Textfeld beendet die Eingabe; Esc und Return verlassen das Feld
+@MainActor
+enum Fokus {
+    private static var beobachter: Any?
+
+    static func einrichten() {
+        guard beobachter == nil else { return }
+        beobachter = NSEvent.addLocalMonitorForEvents(matching: .leftMouseDown) { ereignis in
+            guard let fenster = ereignis.window, let inhalt = fenster.contentView,
+                  fenster.firstResponder is NSText else { return ereignis }
+            let punkt = inhalt.superview?.convert(ereignis.locationInWindow, from: nil) ?? ereignis.locationInWindow
+            if !istEingabe(inhalt.hitTest(punkt)) {
+                fenster.makeFirstResponder(nil)
+            }
+            return ereignis
+        }
+    }
+
+    /// Beendet eine laufende Texteingabe; true, wenn es eine gab
+    @discardableResult
+    static func beenden() -> Bool {
+        guard let fenster = NSApp.keyWindow, fenster.firstResponder is NSText else { return false }
+        fenster.makeFirstResponder(nil)
+        return true
+    }
+
+    private static func istEingabe(_ ansicht: NSView?) -> Bool {
+        var v = ansicht
+        while let x = v {
+            if x is NSText || x is NSTextField || x is NSDatePicker { return true }
+            v = x.superview
+        }
+        return false
+    }
+}
+
+// MARK: - Menüs und Tastaturkürzel
+
+/// Was das Hauptfenster den Menüs zur Verfügung stellt
+struct FensterAktionen {
+    var neu: () -> Void
+    var suchen: () -> Void
+    var loeschen: (Abo) -> Void
+}
+
+private struct AuswahlSchluessel: FocusedValueKey { typealias Value = Binding<Abo?> }
+private struct AktionenSchluessel: FocusedValueKey { typealias Value = FensterAktionen }
+
+extension FocusedValues {
+    var aboAuswahl: Binding<Abo?>? {
+        get { self[AuswahlSchluessel.self] }
+        set { self[AuswahlSchluessel.self] = newValue }
+    }
+    var fensterAktionen: FensterAktionen? {
+        get { self[AktionenSchluessel.self] }
+        set { self[AktionenSchluessel.self] = newValue }
+    }
+}
+
+struct AboBefehle: Commands {
+    @FocusedValue(\.aboAuswahl) private var auswahl
+    @FocusedValue(\.fensterAktionen) private var aktionen
+    @AppStorage("zeitraumJahr") private var jahr = false
+    @AppStorage("kostenZeitraum") private var zeitraumAktiv = false
+
+    private var kosten: Binding<KostenAnsicht> {
+        Binding(get: { zeitraumAktiv ? .zeitraum : (jahr ? .jahr : .monat) },
+                set: { neu in
+                    zeitraumAktiv = neu == .zeitraum
+                    if neu != .zeitraum { jahr = neu == .jahr }
+                })
+    }
+    @AppStorage("uebersichtStatus") private var status = UebersichtStatus.aktiv
+
+    private var abo: Abo? { auswahl?.wrappedValue }
+
+    var body: some Commands {
+        // Ablage
+        CommandGroup(replacing: .newItem) {
+            Button("Neues Abo") { aktionen?.neu() }
+                .keyboardShortcut("n", modifiers: .command)
+                .disabled(aktionen == nil)
+        }
+        CommandGroup(replacing: .importExport) {
+            Button("Backup exportieren…") { Sicherung.backupExportieren() }
+                .keyboardShortcut("e", modifiers: [.command, .shift])
+            Button("Backup importieren…") { Sicherung.backupImportieren() }
+            Divider()
+            Button("Als Tabelle (CSV) exportieren…") { Sicherung.csvExportieren() }
+        }
+
+        // Bearbeiten
+        CommandGroup(after: .undoRedo) {
+            // Zusätzlich zu ⇧⌘Z wie unter Windows gewohnt
+            Button("Wiederholen") { NSApp.sendAction(Selector(("redo:")), to: nil, from: nil) }
+                .keyboardShortcut("y", modifiers: .command)
+        }
+        CommandGroup(after: .textEditing) {
+            Button("Suchen") { aktionen?.suchen() }
+                .keyboardShortcut("f", modifiers: .command)
+                .disabled(aktionen == nil)
+        }
+
+        // Darstellung
+        CommandGroup(before: .toolbar) {
+            Picker("Übersicht zeigt", selection: $status) {
+                ForEach(UebersichtStatus.allCases) { Text($0.menuTitel).tag($0) }
+            }
+            .pickerStyle(.inline)
+            Divider()
+            Picker("Kosten", selection: kosten) {
+                Text("Kosten pro Monat").tag(KostenAnsicht.monat)
+                Text("Kosten pro Jahr").tag(KostenAnsicht.jahr)
+                Text("Zahlungen im Zeitraum").tag(KostenAnsicht.zeitraum)
+            }
+            .pickerStyle(.inline)
+            Divider()
+            Button("Zur Übersicht") { auswahl?.wrappedValue = nil }
+                .keyboardShortcut("[", modifiers: .command)
+                .disabled(abo == nil)
+            Divider()
+        }
+
+        // Abo
+        CommandMenu("Abo") {
+            if let abo, !abo.istAktiv {
+                Button("Wieder aktivieren") { abo.reaktivieren() }
+                    .keyboardShortcut("k", modifiers: .command)
+            } else {
+                Button("Als gekündigt markieren") { abo?.kuendigen() }
+                    .keyboardShortcut("k", modifiers: .command)
+                    .disabled(abo == nil)
+            }
+            Button("Kündigungsseite öffnen") {
+                if let url = abo.flatMap({ Format.url($0.kuendigungsLink) }) { NSWorkspace.shared.open(url) }
+            }
+            .disabled(abo.flatMap { Format.url($0.kuendigungsLink) } == nil)
+            Button("Website öffnen") {
+                if let url = abo.flatMap({ Format.url($0.websiteLink) }) { NSWorkspace.shared.open(url) }
+            }
+            .disabled(abo.flatMap { Format.url($0.websiteLink) } == nil)
+            Divider()
+            Button("Abo löschen…") { if let abo { aktionen?.loeschen(abo) } }
+                .keyboardShortcut(.delete, modifiers: .command)
+                .disabled(abo == nil)
+        }
+    }
+}
+
+/// Welche Abos die Übersicht auswertet
+enum UebersichtStatus: String, CaseIterable, Identifiable {
+    case aktiv, gekuendigt, alle
+    var id: String { rawValue }
+
+    var titel: String {
+        switch self {
+        case .aktiv: return "Aktive"
+        case .gekuendigt: return "Gekündigte"
+        case .alle: return "Alle"
+        }
+    }
+
+    var menuTitel: String {
+        switch self {
+        case .aktiv: return "Nur aktive Abos"
+        case .gekuendigt: return "Nur gekündigte Abos"
+        case .alle: return "Aktive und gekündigte Abos"
+        }
+    }
+
+    func passt(_ abo: Abo) -> Bool {
+        switch self {
+        case .aktiv: return abo.istAktiv
+        case .gekuendigt: return !abo.istAktiv
+        case .alle: return true
+        }
+    }
+}
