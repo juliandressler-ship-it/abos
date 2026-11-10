@@ -72,27 +72,54 @@ extension Abo {
         betrag.map { $0 * max(0, anteilProzent) / 100 }
     }
 
-    /// Letzter Tag, an dem noch gezahlt wird; nil = läuft weiter
-    var letzterZahltag: Date? {
-        if istAktiv {
-            guard !autoVerlaengerung, let ende = laufzeitende else { return nil }
-            return Abo.letzterTag(vor: ende)
+    /// Zeiten, in denen das Abo lief: ab „Abo seit“, unterbrochen durch Kündigungen
+    /// (bis zum letzten Tag der damaligen Laufzeit) und fortgesetzt ab einer Wiederaufnahme.
+    /// `bis == nil` heißt: läuft weiter.
+    var aktivePhasen: [(von: Date, bis: Date?)] {
+        let cal = Kalender.de
+        var phasen: [(von: Date, bis: Date?)] = []
+        var beginn: Date? = cal.startOfDay(for: startdatum)
+        // Verlauf ist neueste zuerst; hier chronologisch durchgehen
+        for e in verlauf.reversed() {
+            switch e.art {
+            case .gekuendigt:
+                if let b = beginn {
+                    let ende = e.vertragsende.map(Abo.letzterTag(vor:)) ?? cal.startOfDay(for: e.datum)
+                    phasen.append((von: b, bis: max(b, ende)))
+                    beginn = nil
+                }
+            case .reaktiviert:
+                if beginn == nil { beginn = cal.startOfDay(for: e.datum) }
+            case .angelegt:
+                break
+            }
         }
-        // Gekündigt: bis zum Ende der Laufzeit, die bei der Kündigung galt
-        if let eintrag = verlauf.first(where: { $0.art == .gekuendigt }) {
-            if let r = eintrag.vertragsende { return Abo.letzterTag(vor: r) }
-            return eintrag.datum
+        if let b = beginn {
+            if istAktiv {
+                let ende = (!autoVerlaengerung) ? laufzeitende.map(Abo.letzterTag(vor:)) : nil
+                phasen.append((von: b, bis: ende))
+            } else if let ende = laufzeitende.map(Abo.letzterTag(vor:)) {
+                // Gekündigt, bevor es den Verlauf gab: nur bis zum bekannten Laufzeitende
+                phasen.append((von: b, bis: max(b, ende)))
+            }
+        } else if istAktiv, let letzte = phasen.last?.bis {
+            // Aktiv, aber ohne „Wieder aktiviert“-Eintrag: ab dem Tag nach der letzten Phase
+            phasen.append((von: cal.date(byAdding: .day, value: 1, to: letzte) ?? letzte, bis: nil))
         }
-        // Gekündigt, bevor es den Verlauf gab: Ende unbekannt, keine Zahlungen annehmen
-        return laufzeitende.map(Abo.letzterTag(vor:)) ?? .distantPast
+        return phasen
     }
 
-    /// Zahltage im Bereich (einschließlich), gerechnet ab „Abo seit“ im Zahlungsintervall
+    /// Zahltage im Bereich (einschließlich): im Zahlungsintervall ab „Abo seit“,
+    /// aber nur in Zeiten, in denen das Abo lief
     func zahltage(von start: Date, bis ende: Date) -> [Date] {
         guard betrag != nil else { return [] }
+        let phasen = aktivePhasen
+        guard !phasen.isEmpty else { return [] }
         let cal = Kalender.de
         let anfang = cal.startOfDay(for: startdatum)
-        let grenze = min(ende, letzterZahltag ?? .distantFuture)
+        let offen = phasen.contains { $0.bis == nil }
+        let spaetestens = offen ? Date.distantFuture : (phasen.compactMap(\.bis).max() ?? anfang)
+        let grenze = min(ende, spaetestens)
         guard anfang <= grenze else { return [] }
         let schritt = monateProIntervall
         var k = 0
@@ -103,7 +130,8 @@ extension Abo {
         var tage: [Date] = []
         var sicherung = 0
         while sicherung < 2000, let tag = cal.date(byAdding: .month, value: k * schritt, to: anfang), tag <= grenze {
-            if tag >= start { tage.append(tag) }
+            let laeuft = phasen.contains { tag >= $0.von && ($0.bis.map { tag <= $0 } ?? true) }
+            if tag >= start && laeuft { tage.append(tag) }
             k += 1
             sicherung += 1
         }

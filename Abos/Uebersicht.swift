@@ -253,6 +253,8 @@ struct UebersichtView: View {
     @AppStorage("tabelleSortFeld") private var sortFeld: SortFeld = .preis
     @AppStorage("tabelleSortUmgekehrt") private var sortUmgekehrt = false
     @AppStorage("uebersichtStatus") private var status: UebersichtStatus = .aktiv
+    /// Kreisdiagramm (Aufteilung nach Kategorie) oder Linie (Kostenentwicklung über die Zeit)
+    @AppStorage("uebersichtDiagramm") private var zeigtVerlauf = false
     @AppStorage("kostenZeitraum") private var zeitraumAktiv = false
     @AppStorage("zeitraumVorgabe") private var vorgabe: ZeitraumVorgabe = .dieserMonat
     @AppStorage("zeitraumVon") private var vonWert: Double = 0
@@ -396,19 +398,23 @@ struct UebersichtView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
                 ansichtsleiste
-                HStack(alignment: .top, spacing: 32) {
-                    KreisDiagramm(kategorien: kategorien, kategorie: $kategorie,
-                                  mitte: Format.euro(summe),
-                                  mitteUnten: kategorie ?? (ansicht == .zeitraum ? zeitraumText : zeitraum))
-                        .frame(width: 220, height: 220)
-                    VStack(alignment: .leading, spacing: 16) {
-                        kopf
-                        legende
-                        if zeigtGekuendigtBox && !gekuendigtGross { gekuendigtBox }
+                if zeigtVerlauf {
+                    verlaufAnsicht
+                } else {
+                    HStack(alignment: .top, spacing: 32) {
+                        KreisDiagramm(kategorien: kategorien, kategorie: $kategorie,
+                                      mitte: Format.euro(summe),
+                                      mitteUnten: kategorie ?? (ansicht == .zeitraum ? zeitraumText : zeitraum))
+                            .frame(width: 220, height: 220)
+                        VStack(alignment: .leading, spacing: 16) {
+                            kopf
+                            legende
+                            if zeigtGekuendigtBox && !gekuendigtGross { gekuendigtBox }
+                        }
+                        .frame(maxWidth: 440, alignment: .leading)
                     }
-                    .frame(maxWidth: 440, alignment: .leading)
+                    if zeigtGekuendigtBox && gekuendigtGross { gekuendigtGrossAnsicht }
                 }
-                if zeigtGekuendigtBox && gekuendigtGross { gekuendigtGrossAnsicht }
                 aboListe
             }
             .padding(24)
@@ -432,6 +438,22 @@ struct UebersichtView: View {
                 .fixedSize()
                 .help("Welche Abos ausgewertet werden")
                 Spacer(minLength: 12)
+                Picker("Diagramm", selection: $zeigtVerlauf) {
+                    Label("Aufteilung", systemImage: "chart.pie").tag(false)
+                    Label("Verlauf", systemImage: "chart.line.uptrend.xyaxis").tag(true)
+                }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+                .fixedSize()
+                .help("Aufteilung nach Kategorie oder Kostenentwicklung über die Zeit")
+            }
+            // Zweite Zeile: was das gewählte Diagramm zeigt
+            if zeigtVerlauf {
+                HStack(spacing: 8) {
+                    Text("Prognose").foregroundStyle(.secondary)
+                    VerlaufZeitraumPicker()
+                }
+            } else {
                 Picker("Kosten", selection: ansichtBindung) {
                     ForEach(KostenAnsicht.allCases) { Text($0.titel).tag($0) }
                 }
@@ -440,8 +462,7 @@ struct UebersichtView: View {
                 .fixedSize()
                 .help("Durchschnitt pro Monat oder Jahr – oder die tatsächlichen Zahlungen in einem Zeitraum")
             }
-            // Zeitraum: eigene Zeile, damit die Leiste nicht zu breit wird
-            if ansicht == .zeitraum {
+            if !zeigtVerlauf && ansicht == .zeitraum {
                 HStack(spacing: 12) {
                     if vorgabe == .eigener {
                         DatePicker("Von", selection: von, displayedComponents: .date)
@@ -459,6 +480,26 @@ struct UebersichtView: View {
                     .fixedSize()
                 }
             }
+        }
+    }
+
+    // MARK: Kostenentwicklung
+
+    /// Aufsummierte Kosten der gewählten Abos (Status und Kategorie wie oben gewählt)
+    private var verlaufAnsicht: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .firstTextBaseline) {
+                Text(titel).font(.title3.weight(.medium))
+                Text("aufsummiert ab „Abo seit“, mit Kündigungen und Wiederaufnahmen")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Spacer()
+                if kategorie != nil {
+                    Button("Alle Kategorien") { kategorie = nil }
+                        .buttonStyle(.link)
+                }
+            }
+            KostenVerlauf(abos: inKategorie, hoehe: 260)
         }
     }
 

@@ -235,6 +235,19 @@ struct AboDetailView: View {
 
     private var formular: some View {
         Form {
+            // Ganz oben: wie sich die Kosten dieses Abos über die Zeit aufsummieren
+            Section {
+                KostenVerlauf(abos: [abo], hoehe: 180)
+                    .padding(.vertical, 4)
+            } header: {
+                HStack {
+                    Text("Kostenentwicklung")
+                    Spacer()
+                    VerlaufZeitraumPicker()
+                        .controlSize(.small)
+                }
+            }
+
             Section("Kosten") {
                 LabeledContent("Betrag") {
                     HStack(spacing: 4) {

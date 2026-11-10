@@ -67,6 +67,7 @@ struct AboBefehle: Commands {
     @FocusedValue(\.fensterAktionen) private var aktionen
     @AppStorage("zeitraumJahr") private var jahr = false
     @AppStorage("kostenZeitraum") private var zeitraumAktiv = false
+    @AppStorage("uebersichtDiagramm") private var zeigtVerlauf = false
 
     private var kosten: Binding<KostenAnsicht> {
         Binding(get: { zeitraumAktiv ? .zeitraum : (jahr ? .jahr : .monat) },
@@ -110,6 +111,12 @@ struct AboBefehle: Commands {
         CommandGroup(before: .toolbar) {
             Picker("Übersicht zeigt", selection: $status) {
                 ForEach(UebersichtStatus.allCases) { Text($0.menuTitel).tag($0) }
+            }
+            .pickerStyle(.inline)
+            Divider()
+            Picker("Diagramm", selection: $zeigtVerlauf) {
+                Text("Aufteilung nach Kategorie").tag(false)
+                Text("Kostenverlauf").tag(true)
             }
             .pickerStyle(.inline)
             Divider()
