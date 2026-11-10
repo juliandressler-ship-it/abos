@@ -2,7 +2,7 @@
   "manifest_version": "0.3",
   "name": "abos",
   "display_name": "Abos",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Verbindet Claude mit der Mac-App „Abos“: Abos und Versicherungen auflisten, anlegen, ändern und Sparpotenziale finden. Alles bleibt lokal auf deinem Mac.",
   "long_description": "Claude greift über einen lokalen Server auf die Abos-App zu, die auf deinem Mac installiert sein muss. Es gibt kein Konto und keinen Server im Internet; die Daten liegen nur in der App. Löschen ist bewusst nur in der App selbst möglich.",
   "author": {

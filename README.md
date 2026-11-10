@@ -12,6 +12,7 @@ Alles bleibt auf deinem Mac. Kein Konto, keine Cloud, kein Netzwerk.
 - **Kündigungsverlauf:** wann gekündigt, wann wieder aktiviert
 - **Kündigen per E-Mail:** öffnet eine fertig formulierte Kündigung in deinem Mailprogramm
 - **Auswertung:** aktive, gekündigte oder alle Abos – und was Kündigungen gespart haben
+- **Kostenverlauf:** Liniendiagramm der aufsummierten Kosten über die Zeit – mit Prognose bis zu 100 Jahre, pro Kategorie und in jeder Abo-Karte; Kündigungen und Wiederaufnahmen werden berücksichtigt
 - **Backup:** Export und Import als Datei, Export als Tabelle (CSV) für Excel oder Numbers
 - **Claude:** Claude kann deine Abos lesen, neue anlegen und Sparpotenziale finden (siehe unten)
 
