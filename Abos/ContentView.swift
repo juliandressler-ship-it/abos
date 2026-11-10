@@ -292,8 +292,8 @@ struct DashboardView: View {
         return liste
     }
 
-    /// Erstes sichtbares Kalenderblatt für die Pfeil-Knöpfe
-    @State private var fristStart = 0
+    /// Erstes sichtbares Kalenderblatt; folgt auch dem Scrollen mit dem Trackpad
+    @State private var fristPosition: Int? = 0
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
@@ -377,11 +377,15 @@ struct DashboardView: View {
                 }
                 Spacer()
                 if liste.count > 4 {
-                    Button { fristStart = max(0, fristStart - 3) } label: { Image(systemName: "chevron.left") }
-                        .disabled(fristStart == 0)
+                    let pos = fristPosition ?? 0
+                    Button { fristBlaettern(zu: 0) } label: { Image(systemName: "arrow.left.to.line") }
+                        .disabled(pos == 0)
+                        .help("Zurück zum Anfang – zur nächsten Frist")
+                    Button { fristBlaettern(zu: max(0, pos - 3)) } label: { Image(systemName: "chevron.left") }
+                        .disabled(pos == 0)
                         .help("Frühere Fristen")
-                    Button { fristStart = min(liste.count - 1, fristStart + 3) } label: { Image(systemName: "chevron.right") }
-                        .disabled(fristStart >= liste.count - 4)
+                    Button { fristBlaettern(zu: min(liste.count - 1, pos + 3)) } label: { Image(systemName: "chevron.right") }
+                        .disabled(pos >= liste.count - 4)
                         .help("Spätere Fristen")
                 }
             }
@@ -392,25 +396,26 @@ struct DashboardView: View {
                 Spacer(minLength: 0)
             } else {
                 Spacer(minLength: 0)
-                ScrollViewReader { leser in
-                    ScrollView(.horizontal) {
-                        HStack(alignment: .top, spacing: 8) {
-                            ForEach(Array(liste.enumerated()), id: \.offset) { i, eintrag in
-                                fristBlatt(eintrag.abo, eintrag.frist)
-                                    .frame(width: 128)
-                                    .id(i)
-                            }
+                ScrollView(.horizontal) {
+                    HStack(alignment: .top, spacing: 8) {
+                        ForEach(Array(liste.enumerated()), id: \.offset) { i, eintrag in
+                            fristBlatt(eintrag.abo, eintrag.frist)
+                                .frame(width: 128)
+                                .id(i)
                         }
                     }
-                    .scrollIndicators(.automatic)
-                    .onChange(of: fristStart) { _, neu in
-                        withAnimation(.easeOut(duration: 0.25)) { leser.scrollTo(neu, anchor: .leading) }
-                    }
+                    .scrollTargetLayout()
                 }
+                .scrollPosition(id: $fristPosition, anchor: .leading)
+                .scrollIndicators(.automatic)
                 .padding(.horizontal, -8)
                 .padding(.bottom, -8)
             }
         }
+    }
+
+    private func fristBlaettern(zu ziel: Int) {
+        withAnimation(.easeOut(duration: 0.25)) { fristPosition = ziel }
     }
 
     private func fristBlatt(_ abo: Abo, _ frist: Date) -> some View {

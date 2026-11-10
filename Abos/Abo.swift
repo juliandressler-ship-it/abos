@@ -416,6 +416,14 @@ enum Format {
         return wert.formatted(.currency(code: "EUR").locale(locale))
     }
 
+    /// Erlaubter Bereich für Datumsfelder – verhindert Tippfehler wie das Jahr 0099
+    static let datumsBereich: ClosedRange<Date> = {
+        let cal = Kalender.de
+        let von = cal.date(from: DateComponents(year: 1950, month: 1, day: 1)) ?? .distantPast
+        let bis = cal.date(from: DateComponents(year: 2200, month: 12, day: 31)) ?? .distantFuture
+        return von...bis
+    }()
+
     static func datum(_ datum: Date?) -> String {
         guard let datum else { return "–" }
         return datum.formatted(.dateTime.day(.twoDigits).month(.twoDigits).year().locale(locale))

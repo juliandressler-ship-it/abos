@@ -763,7 +763,8 @@ struct UebersichtView: View {
             .foregroundStyle(.secondary)
             .padding(.horizontal, 8)
             Divider()
-            VStack(spacing: 0) {
+            // Lazy: nur sichtbare Zeilen werden aufgebaut
+            LazyVStack(spacing: 0) {
                 ForEach(tabelle) { abo in
                     aboZeile(abo)
                 }
@@ -773,7 +774,7 @@ struct UebersichtView: View {
                     .foregroundStyle(.secondary)
                     .padding(8)
             } else {
-                Text("Name, Kategorie, Kündigungsdatum und Preise lassen sich direkt hier ändern – ein Klick auf › öffnet alle Details")
+                Text("Ein Klick auf den Namen öffnet das Abo – Kategorie, Kündigungsdatum und Preise lassen sich direkt hier ändern, der Stift benennt um")
                     .font(.caption)
                     .foregroundStyle(.tertiary)
                     .padding(.horizontal, 8)
@@ -793,7 +794,7 @@ struct UebersichtView: View {
         let name = Auswertung.kategorieName(abo)
         return HStack(spacing: 12) {
             HStack(spacing: 8) {
-                NameFeld(abo: abo)
+                NameFeld(abo: abo, oeffnen: { auswahl = abo })
                 if !abo.istAktiv {
                     Image(systemName: "xmark.circle")
                         .foregroundStyle(.secondary)
@@ -871,39 +872,66 @@ private struct ZellenRahmen: ViewModifier {
     }
 }
 
-/// Name: wird erst beim Bestätigen (Return oder Verlassen) übernommen, damit die Zeile beim Tippen nicht springt
+/// Name: ein Klick öffnet das Abo. Zum Umbenennen erscheint beim Überfahren ein Stift.
+/// Das Eingabefeld gibt es erst beim Bearbeiten – das hält die Tabelle schnell.
 struct NameFeld: View {
     let abo: Abo
+    var oeffnen: () -> Void
+    @State private var bearbeiten = false
     @State private var text = ""
     @State private var hover = false
     @FocusState private var fokus: Bool
 
     var body: some View {
-        TextField("Name", text: $text, prompt: Text("Ohne Namen"))
-            .textFieldStyle(.plain)
-            .lineLimit(1)
-            .focused($fokus)
-            .onSubmit { uebernehmen(); fokus = false }
-            .onExitCommand { text = abo.name; fokus = false }   // Esc verwirft die Änderung
-            .onChange(of: fokus) { _, aktiv in if !aktiv { uebernehmen() } }
-            .onAppear { text = abo.name }
-            .onChange(of: abo.name) { _, neu in if !fokus { text = neu } }
-            .modifier(ZellenRahmen(hover: hover, fokus: fokus))
-            .padding(.leading, -6)
+        if bearbeiten {
+            TextField("Name", text: $text, prompt: Text("Ohne Namen"))
+                .textFieldStyle(.plain)
+                .lineLimit(1)
+                .focused($fokus)
+                .onSubmit { uebernehmen() }
+                .onExitCommand { bearbeiten = false }   // Esc verwirft die Änderung
+                .onChange(of: fokus) { _, aktiv in if !aktiv { uebernehmen() } }
+                .onAppear { text = abo.name; fokus = true }
+                .modifier(ZellenRahmen(hover: false, fokus: true))
+                .padding(.leading, -6)
+        } else {
+            HStack(spacing: 6) {
+                Button(action: oeffnen) {
+                    Text(abo.name.isEmpty ? "Ohne Namen" : abo.name)
+                        .lineLimit(1)
+                        .foregroundStyle(abo.name.isEmpty ? .secondary : .primary)
+                        .frame(maxWidth: .infinity, minHeight: 28, alignment: .leading)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .help("Abo öffnen")
+                Button { bearbeiten = true } label: {
+                    Image(systemName: "pencil")
+                        .foregroundStyle(.secondary)
+                        .frame(width: 20, height: 20)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .opacity(hover ? 1 : 0)
+                .help("Umbenennen")
+            }
             .onHover { hover = $0 }
-            .help("Name ändern")
+        }
     }
 
     private func uebernehmen() {
         let neu = text.trimmingCharacters(in: .whitespaces)
         if neu != abo.name { abo.name = neu }
+        bearbeiten = false
     }
 }
 
-/// Eigene Kosten pro Monat oder Jahr; der Betrag pro Zahlung wird daraus zurückgerechnet
+/// Eigene Kosten pro Monat oder Jahr; der Betrag pro Zahlung wird daraus zurückgerechnet.
+/// Zeigt Text und wird erst beim Klick zum Eingabefeld.
 struct BetragFeld: View {
     let abo: Abo
     let faktor: Double
+    @State private var bearbeiten = false
     @State private var hover = false
     @FocusState private var fokus: Bool
 
@@ -913,25 +941,41 @@ struct BetragFeld: View {
     }
 
     var body: some View {
-        HStack(spacing: 2) {
-            TextField(faktor == 1 ? "pro Monat" : "pro Jahr", value: wert,
-                      format: .number.precision(.fractionLength(2)).locale(Format.locale),
-                      prompt: Text("offen"))
-                .textFieldStyle(.plain)
-                .multilineTextAlignment(.trailing)
-                .monospacedDigit()
-                .focused($fokus)
-                .onSubmit { fokus = false }
-            Text("€").foregroundStyle(.secondary)
+        Group {
+            if bearbeiten {
+                HStack(spacing: 2) {
+                    TextField(faktor == 1 ? "pro Monat" : "pro Jahr", value: wert,
+                              format: .number.precision(.fractionLength(2)).locale(Format.locale),
+                              prompt: Text("offen"))
+                        .textFieldStyle(.plain)
+                        .multilineTextAlignment(.trailing)
+                        .monospacedDigit()
+                        .focused($fokus)
+                        .onSubmit { bearbeiten = false }
+                        .onExitCommand { bearbeiten = false }
+                        .onChange(of: fokus) { _, aktiv in if !aktiv { bearbeiten = false } }
+                        .onAppear { fokus = true }
+                    Text("€").foregroundStyle(.secondary)
+                }
+                .modifier(ZellenRahmen(hover: false, fokus: true))
+            } else {
+                Button { bearbeiten = true } label: {
+                    Text(Format.euro(abo.proMonat.map { $0 * faktor }))
+                        .monospacedDigit()
+                        .foregroundStyle(faktor == 1 && abo.betrag != nil ? .primary : .secondary)
+                        .frame(maxWidth: .infinity, alignment: .trailing)
+                        .modifier(ZellenRahmen(hover: hover, fokus: false))
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .onHover { hover = $0 }
+            }
         }
-        .foregroundStyle(faktor == 1 && abo.betrag != nil ? .primary : .secondary)
-        .modifier(ZellenRahmen(hover: hover, fokus: fokus))
-        .onHover { hover = $0 }
         .help(hilfe)
     }
 
     private var hilfe: String {
-        var text = "Dein Anteil \(faktor == 1 ? "pro Monat" : "pro Jahr") – ändern rechnet den Betrag pro Zahlung um"
+        var text = "Klicken zum Ändern – dein Anteil \(faktor == 1 ? "pro Monat" : "pro Jahr"), der Betrag pro Zahlung wird umgerechnet"
         if abo.anteilProzent != 100 { text += " (Anteil \(Int(abo.anteilProzent)) %)" }
         return text
     }

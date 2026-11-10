@@ -289,7 +289,7 @@ struct AboDetailView: View {
                         Stepper("Anteil", value: $abo.anteilProzent, in: 0...100, step: 5).labelsHidden()
                     }
                 }
-                DatePicker("Abo seit", selection: $abo.startdatum, displayedComponents: .date)
+                DatePicker("Abo seit", selection: $abo.startdatum, in: Format.datumsBereich, displayedComponents: .date)
             }
 
             kuendigungSektion
@@ -321,14 +321,14 @@ struct AboDetailView: View {
             .pickerStyle(.segmented)
 
             if abo.kuendigenBisFest != nil {
-                DatePicker("Kündigen bis", selection: festerTermin, displayedComponents: .date)
+                DatePicker("Kündigen bis", selection: festerTermin, in: Format.datumsBereich, displayedComponents: .date)
                 verlaengerungPicker(titel: "Wiederholen")
             } else {
                 if abo.autoVerlaengerung {
-                    DatePicker("Nächste Verlängerung", selection: vertragsende, displayedComponents: .date)
+                    DatePicker("Nächste Verlängerung", selection: vertragsende, in: Format.datumsBereich, displayedComponents: .date)
                         .help("Der Tag, an dem das Abo weiterläuft – meist der Tag der nächsten Zahlung")
                 } else {
-                    DatePicker("Läuft bis einschließlich", selection: letzterTagBindung, displayedComponents: .date)
+                    DatePicker("Läuft bis einschließlich", selection: letzterTagBindung, in: Format.datumsBereich, displayedComponents: .date)
                 }
                 verlaengerungPicker(titel: "Verlängert sich")
                 Picker("Kündigungsfrist", selection: fristAuswahl) {

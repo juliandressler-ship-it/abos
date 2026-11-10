@@ -1,4 +1,3 @@
-import Charts
 import SwiftUI
 
 // MARK: - Daten
@@ -46,6 +45,17 @@ enum Verlauf {
             monat = cal.date(byAdding: .month, value: 1, to: monat) ?? letzterMonat.addingTimeInterval(1)
         }
         return punkte
+    }
+
+    /// Für lange Zeiträume nur jeden n-ten Monat zeichnen (Summen bleiben exakt); der aktuelle und
+    /// der letzte Monat sind immer dabei
+    static func ausgeduennt(_ punkte: [VerlaufPunkt], hoechstens: Int = 240) -> [VerlaufPunkt] {
+        guard punkte.count > hoechstens else { return punkte }
+        let schritt = Int((Double(punkte.count) / Double(hoechstens)).rounded(.up))
+        let heute = monatsAnfang(Date())
+        return punkte.enumerated().filter { i, p in
+            i % schritt == 0 || i == punkte.count - 1 || p.monat == heute
+        }.map(\.element)
     }
 
     /// Tatsächlich gezahlt bis heute (einschließlich)
@@ -113,7 +123,6 @@ struct KostenVerlauf: View {
     @AppStorage("verlaufJahre") private var jahre = 3
     @AppStorage("verlaufEigen") private var eigen = false
     @AppStorage("verlaufEigeneJahre") private var eigeneJahre = 20
-    @State private var auswahl: Date?
 
     private var ende: Date {
         let n = eigen ? min(100, max(1, eigeneJahre)) : jahre
@@ -129,7 +138,8 @@ struct KostenVerlauf: View {
                     .frame(maxWidth: .infinity, minHeight: hoehe * 0.5)
             } else {
                 if zeigtSummen { summen(punkte) }
-                diagramm(punkte)
+                // Eigene Ansicht: Mausbewegungen zeichnen nur das Diagramm neu, gerechnet wird nicht noch einmal
+                VerlaufDiagramm(punkte: Verlauf.ausgeduennt(punkte), hoehe: hoehe)
             }
         }
     }
@@ -149,104 +159,231 @@ struct KostenVerlauf: View {
         }
     }
 
-    private func diagramm(_ punkte: [VerlaufPunkt]) -> some View {
-        let heute = Verlauf.monatsAnfang(Date())
-        // Bisher durchgezogen, Prognose gestrichelt; der aktuelle Monat gehört zu beiden, damit die Linie zusammenhängt
-        let bisher = punkte.filter { $0.monat <= heute }
-        let prognose = punkte.filter { $0.monat >= heute }
-        let gewaehlt = auswahl.flatMap { a in punkte.min { abs($0.monat.timeIntervalSince(a)) < abs($1.monat.timeIntervalSince(a)) } }
-        let jahreSpanne = (punkte.last?.monat.timeIntervalSince(punkte.first?.monat ?? Date()) ?? 0) / (365 * 86400)
+    private func monatJahr(_ d: Date) -> String {
+        d.formatted(.dateTime.month(.wide).year().locale(Format.locale))
+    }
+}
 
-        return Chart {
-            ForEach(bisher) { p in
-                AreaMark(x: .value("Monat", p.monat), y: .value("Summe", p.kumuliert))
-                    .interpolationMethod(.stepEnd)
-                    .foregroundStyle(Color.accentColor.opacity(0.12))
-                LineMark(x: .value("Monat", p.monat), y: .value("Summe", p.kumuliert), series: .value("Teil", "Bisher"))
-                    .interpolationMethod(.stepEnd)
-                    .foregroundStyle(Color.accentColor)
-                    .lineStyle(StrokeStyle(lineWidth: 2))
-            }
-            ForEach(prognose) { p in
-                AreaMark(x: .value("Monat", p.monat), y: .value("Summe", p.kumuliert))
-                    .interpolationMethod(.stepEnd)
-                    .foregroundStyle(Color.accentColor.opacity(0.05))
-                LineMark(x: .value("Monat", p.monat), y: .value("Summe", p.kumuliert), series: .value("Teil", "Prognose"))
-                    .interpolationMethod(.stepEnd)
-                    .foregroundStyle(Color.accentColor.opacity(0.45))
-                    .lineStyle(StrokeStyle(lineWidth: 2))
-            }
-            RuleMark(x: .value("Heute", Date()))
-                .foregroundStyle(Color.primary.opacity(0.2))
-                .lineStyle(StrokeStyle(lineWidth: 1, dash: [2, 3]))
-                .annotation(position: .top, alignment: .leading, spacing: 2) {
-                    Text("heute").font(.caption2).foregroundStyle(.secondary)
-                }
-            if let g = gewaehlt {
-                RuleMark(x: .value("Monat", g.monat))
-                    .foregroundStyle(Color.primary.opacity(0.25))
-                // Das Fenster sitzt am Punkt und bleibt immer innerhalb des Diagramms
-                PointMark(x: .value("Monat", g.monat), y: .value("Summe", g.kumuliert))
-                    .foregroundStyle(Color.accentColor)
-                    .symbolSize(40)
-                    .annotation(position: .topLeading, spacing: 8,
-                                overflowResolution: .init(x: .fit(to: .chart), y: .fit(to: .chart))) {
-                        infoFenster(g, zukunft: g.monat > heute)
-                    }
-            }
-        }
-        .chartXAxis {
-            if jahreSpanne > 2 {
-                // Bei langen Zeiträumen nur alle 2, 5 oder 10 Jahre beschriften
-                let schritt = jahreSpanne > 40 ? 10 : jahreSpanne > 15 ? 5 : jahreSpanne > 7 ? 2 : 1
-                AxisMarks(values: .stride(by: .year, count: schritt)) { _ in
-                    AxisGridLine().foregroundStyle(Color.primary.opacity(0.06))
-                    AxisValueLabel(format: .dateTime.year().locale(Format.locale))
-                }
-            } else {
-                AxisMarks(values: .stride(by: .month, count: 3)) { _ in
-                    AxisGridLine().foregroundStyle(Color.primary.opacity(0.06))
-                    AxisValueLabel(format: .dateTime.month(.abbreviated).year(.twoDigits).locale(Format.locale))
+/// Das eigentliche Diagramm, selbst gezeichnet (deutlich schneller als Swift Charts).
+/// Hält den Maus-Zustand selbst, damit Mausbewegungen nichts neu berechnen.
+struct VerlaufDiagramm: View {
+    let punkte: [VerlaufPunkt]
+    let hoehe: CGFloat
+    @State private var gewaehlt: Int?
+
+    // Ränder für die Achsenbeschriftung
+    private let links: CGFloat = 64
+    private let unten: CGFloat = 20
+    private let oben: CGFloat = 14
+
+    var body: some View {
+        let skala = Skala(punkte: punkte)
+        GeometryReader { geo in
+            let flaeche = CGRect(x: links, y: oben, width: max(1, geo.size.width - links - 4),
+                                 height: max(1, geo.size.height - oben - unten))
+            let lage = Lage(skala: skala, flaeche: flaeche)
+            ZStack(alignment: .topLeading) {
+                gitter(skala, lage, flaeche)
+                linien(skala, lage, flaeche)
+                heuteLinie(skala, lage, flaeche)
+                if let i = gewaehlt, punkte.indices.contains(i) {
+                    markierung(i, lage, flaeche, breite: geo.size.width)
                 }
             }
-        }
-        .chartYAxis {
-            AxisMarks(position: .leading) { wert in
-                AxisGridLine().foregroundStyle(Color.primary.opacity(0.06))
-                AxisValueLabel {
-                    if let v = wert.as(Double.self) {
-                        Text(v.formatted(.currency(code: "EUR").precision(.fractionLength(0)).locale(Format.locale)))
-                    }
+            .contentShape(Rectangle())
+            .onContinuousHover(coordinateSpace: .local) { phase in
+                switch phase {
+                case .active(let ort): gewaehlt = lage.index(beiX: ort.x, punkte: punkte)
+                case .ended: gewaehlt = nil
                 }
-            }
-        }
-        .chartOverlay { proxy in
-            GeometryReader { geo in
-                Rectangle()
-                    .fill(Color.clear)
-                    .contentShape(Rectangle())
-                    .onContinuousHover { phase in
-                        switch phase {
-                        case .active(let ort):
-                            guard let rahmen = proxy.plotFrame else { return }
-                            let x = ort.x - geo[rahmen].origin.x
-                            auswahl = proxy.value(atX: x, as: Date.self)
-                        case .ended:
-                            auswahl = nil
-                        }
-                    }
             }
         }
         .frame(height: hoehe)
-        .padding(.top, 12) // Platz für „heute“
-        .accessibilityLabel("Aufsummierte Kosten über die Zeit")
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Aufsummierte Kosten über die Zeit, bis \(Format.euro(punkte.last?.kumuliert))")
     }
 
-    /// Das kleine Fenster beim Überfahren
+    // MARK: Maßstab
+
+    struct Skala {
+        let start: Date
+        let ende: Date
+        let maxWert: Double
+        let ticks: [Double]
+        let heute: Date
+
+        init(punkte: [VerlaufPunkt]) {
+            start = punkte.first?.monat ?? Date()
+            ende = punkte.last?.monat ?? Date()
+            heute = Date()
+            let roh = max(punkte.last?.kumuliert ?? 1, 1)
+            // „Schöne“ Teilung: 1, 2, 2,5 oder 5 × 10^n
+            let grob = roh / 4
+            let basis = pow(10, floor(log10(grob)))
+            let stufe = [1, 2, 2.5, 5, 10].map { $0 * basis }.first { $0 >= grob } ?? grob
+            maxWert = ceil(roh / stufe) * stufe
+            ticks = stride(from: 0, through: maxWert + stufe / 2, by: stufe).map { $0 }
+        }
+    }
+
+    struct Lage {
+        let skala: Skala
+        let flaeche: CGRect
+
+        func x(_ d: Date) -> CGFloat {
+            let spanne = max(1, skala.ende.timeIntervalSince(skala.start))
+            return flaeche.minX + CGFloat(d.timeIntervalSince(skala.start) / spanne) * flaeche.width
+        }
+
+        func y(_ v: Double) -> CGFloat {
+            flaeche.maxY - CGFloat(v / max(skala.maxWert, 1)) * flaeche.height
+        }
+
+        /// Nächster Punkt zur Mausposition (binäre Suche über die Zeit)
+        func index(beiX px: CGFloat, punkte: [VerlaufPunkt]) -> Int? {
+            guard !punkte.isEmpty, px >= flaeche.minX - 8, px <= flaeche.maxX + 8 else { return nil }
+            var lo = 0, hi = punkte.count - 1
+            while lo < hi {
+                let mid = (lo + hi) / 2
+                if x(punkte[mid].monat) < px { lo = mid + 1 } else { hi = mid }
+            }
+            if lo > 0 && abs(x(punkte[lo - 1].monat) - px) < abs(x(punkte[lo].monat) - px) { return lo - 1 }
+            return lo
+        }
+    }
+
+    // MARK: Zeichnen
+
+    private func gitter(_ skala: Skala, _ lage: Lage, _ f: CGRect) -> some View {
+        let cal = Kalender.de
+        let jahre = max(0, cal.dateComponents([.year], from: skala.start, to: skala.ende).year ?? 0)
+        let schritt = jahre > 40 ? 10 : jahre > 15 ? 5 : jahre > 7 ? 2 : 1
+        let ersteJahr = cal.component(.year, from: skala.start) + 1
+        let jahresMarken: [Date] = jahre >= 2
+            ? stride(from: ersteJahr, through: cal.component(.year, from: skala.ende), by: schritt)
+                .compactMap { cal.date(from: DateComponents(year: $0, month: 1, day: 1)) }
+            : stride(from: 0, through: max(0, cal.dateComponents([.month], from: skala.start, to: skala.ende).month ?? 0), by: 3)
+                .compactMap { cal.date(byAdding: .month, value: $0, to: skala.start) }
+        let format: Date.FormatStyle = jahre >= 2
+            ? .dateTime.year().locale(Format.locale)
+            : .dateTime.month(.abbreviated).year(.twoDigits).locale(Format.locale)
+
+        return ZStack(alignment: .topLeading) {
+            // Waagrechte Linien mit Beträgen
+            ForEach(skala.ticks, id: \.self) { t in
+                Path { p in
+                    p.move(to: CGPoint(x: f.minX, y: lage.y(t)))
+                    p.addLine(to: CGPoint(x: f.maxX, y: lage.y(t)))
+                }
+                .stroke(Color.primary.opacity(0.07), lineWidth: 1)
+                Text(t.formatted(.currency(code: "EUR").precision(.fractionLength(0)).locale(Format.locale)))
+                    .font(.caption2)
+                    .monospacedDigit()
+                    .foregroundStyle(.secondary)
+                    .frame(width: links - 8, alignment: .trailing)
+                    .position(x: (links - 8) / 2, y: lage.y(t))
+            }
+            // Senkrechte Linien mit Jahren bzw. Monaten
+            ForEach(jahresMarken, id: \.self) { d in
+                if d >= skala.start && d <= skala.ende {
+                    Path { p in
+                        p.move(to: CGPoint(x: lage.x(d), y: f.minY))
+                        p.addLine(to: CGPoint(x: lage.x(d), y: f.maxY))
+                    }
+                    .stroke(Color.primary.opacity(0.05), lineWidth: 1)
+                    Text(d.formatted(format))
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                        .fixedSize()
+                        .position(x: lage.x(d), y: f.maxY + unten / 2 + 2)
+                }
+            }
+        }
+    }
+
+    /// Treppenlinie: der Wert gilt bis zum nächsten Monat; bisher kräftig, Prognose heller
+    private func linien(_ skala: Skala, _ lage: Lage, _ f: CGRect) -> some View {
+        let heute = Verlauf.monatsAnfang(skala.heute)
+        let grenze = punkte.lastIndex { $0.monat <= heute } ?? 0
+        let bisher = Array(punkte[0...grenze])
+        let prognose = Array(punkte[grenze...])
+        return ZStack {
+            flaeche(bisher, lage, f).fill(Color.accentColor.opacity(0.14))
+            flaeche(prognose, lage, f).fill(Color.accentColor.opacity(0.06))
+            treppe(prognose, lage).stroke(Color.accentColor.opacity(0.45), style: StrokeStyle(lineWidth: 2, lineJoin: .round))
+            treppe(bisher, lage).stroke(Color.accentColor, style: StrokeStyle(lineWidth: 2, lineJoin: .round))
+        }
+    }
+
+    private func treppe(_ teil: [VerlaufPunkt], _ lage: Lage) -> Path {
+        Path { p in
+            guard let erster = teil.first else { return }
+            p.move(to: CGPoint(x: lage.x(erster.monat), y: lage.y(erster.kumuliert)))
+            var vorher = erster.kumuliert
+            for pkt in teil.dropFirst() {
+                let x = lage.x(pkt.monat)
+                p.addLine(to: CGPoint(x: x, y: lage.y(vorher)))
+                p.addLine(to: CGPoint(x: x, y: lage.y(pkt.kumuliert)))
+                vorher = pkt.kumuliert
+            }
+        }
+    }
+
+    private func flaeche(_ teil: [VerlaufPunkt], _ lage: Lage, _ f: CGRect) -> Path {
+        var p = treppe(teil, lage)
+        guard let erster = teil.first, let letzter = teil.last else { return p }
+        p.addLine(to: CGPoint(x: lage.x(letzter.monat), y: f.maxY))
+        p.addLine(to: CGPoint(x: lage.x(erster.monat), y: f.maxY))
+        p.closeSubpath()
+        return p
+    }
+
+    private func heuteLinie(_ skala: Skala, _ lage: Lage, _ f: CGRect) -> some View {
+        let x = lage.x(skala.heute)
+        return ZStack(alignment: .topLeading) {
+            Path { p in
+                p.move(to: CGPoint(x: x, y: f.minY))
+                p.addLine(to: CGPoint(x: x, y: f.maxY))
+            }
+            .stroke(Color.primary.opacity(0.25), style: StrokeStyle(lineWidth: 1, dash: [2, 3]))
+            Text("heute")
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+                .fixedSize()
+                .position(x: x + 16, y: f.minY - 7)
+        }
+    }
+
+    /// Senkrechte Linie, Punkt und das kleine Fenster beim Überfahren
+    private func markierung(_ i: Int, _ lage: Lage, _ f: CGRect, breite: CGFloat) -> some View {
+        let p = punkte[i]
+        let x = lage.x(p.monat), y = lage.y(p.kumuliert)
+        let fensterBreite: CGFloat = 230
+        // Fenster links vom Punkt; ist dort kein Platz, rechts davon
+        let linksDavon = x - fensterBreite - 10
+        let fx = linksDavon >= f.minX ? linksDavon : min(x + 10, breite - fensterBreite)
+        let fy = min(max(f.minY, y - 92), f.maxY - 84)
+        return ZStack(alignment: .topLeading) {
+            Path { pfad in
+                pfad.move(to: CGPoint(x: x, y: f.minY))
+                pfad.addLine(to: CGPoint(x: x, y: f.maxY))
+            }
+            .stroke(Color.primary.opacity(0.25), lineWidth: 1)
+            Circle()
+                .fill(Color.accentColor)
+                .frame(width: 8, height: 8)
+                .position(x: x, y: y)
+            infoFenster(p, zukunft: p.monat > Verlauf.monatsAnfang(Date()))
+                .frame(width: fensterBreite)
+                .offset(x: fx, y: fy)
+        }
+        .allowsHitTesting(false)
+    }
+
     private func infoFenster(_ p: VerlaufPunkt, zukunft: Bool) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             HStack(spacing: 6) {
-                Text(monatJahr(p.monat)).fontWeight(.medium)
+                Text(p.monat.formatted(.dateTime.month(.wide).year().locale(Format.locale))).fontWeight(.medium)
                 if zukunft {
                     Text("Prognose").font(.caption2).foregroundStyle(.secondary)
                 }
@@ -264,12 +401,8 @@ struct KostenVerlauf: View {
         }
         .font(.callout)
         .padding(10)
-        .frame(width: 230)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8))
-        .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(Color.primary.opacity(0.1)))
-    }
-
-    private func monatJahr(_ d: Date) -> String {
-        d.formatted(.dateTime.month(.wide).year().locale(Format.locale))
+        .background(Color(nsColor: .windowBackgroundColor).opacity(0.97), in: RoundedRectangle(cornerRadius: 8))
+        .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(Color.primary.opacity(0.12)))
+        .shadow(color: .black.opacity(0.08), radius: 4, y: 2)
     }
 }
