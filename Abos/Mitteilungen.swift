@@ -3,6 +3,40 @@ import Foundation
 import SwiftData
 import UserNotifications
 
+/// Standard-Erinnerungen für alle Abos, die nichts Eigenes eingestellt haben.
+/// Werte: -1 = aus, 0 = am Tag der Frist, sonst Tage vorher.
+enum StandardErinnerung {
+    static let ersteSchluessel = "standardErinnerung1"
+    static let zweiteSchluessel = "standardErinnerung2"
+
+    static let optionen: [(tage: Int, titel: String)] = [
+        (-1, "Aus"), (0, "Am Tag der Frist"), (1, "1 Tag vorher"), (3, "3 Tage vorher"),
+        (7, "1 Woche vorher"), (14, "2 Wochen vorher"), (30, "1 Monat vorher"),
+    ]
+
+    static func registrieren() {
+        UserDefaults.standard.register(defaults: [ersteSchluessel: 0, zweiteSchluessel: -1])
+    }
+
+    /// Aktive Vorläufe, größter zuerst
+    static var vorlaeufe: [Int] {
+        let d = UserDefaults.standard
+        return Array(Set([d.integer(forKey: ersteSchluessel), d.integer(forKey: zweiteSchluessel)].filter { $0 >= 0 }))
+            .sorted(by: >)
+    }
+
+    static func text(_ tage: Int) -> String {
+        optionen.first { $0.tage == tage }?.titel ?? "\(tage) Tage vorher"
+    }
+
+    /// z. B. „am Tag der Frist“ oder „1 Woche vorher und am Tag der Frist“
+    static var beschreibung: String {
+        let v = vorlaeufe
+        guard !v.isEmpty else { return "aus" }
+        return v.map { $0 == 0 ? "am Tag der Frist" : text($0) }.joined(separator: " und ")
+    }
+}
+
 /// Lokale macOS-Mitteilungen für Kündigungsfristen. Kein Netzwerk, alles auf dem Gerät.
 enum Mitteilungen {
     static let kategorieID = "ABO_FRIST"

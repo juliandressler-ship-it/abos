@@ -10,15 +10,18 @@ struct ContentView: View {
     @State private var kategorieFilter: String?
     @State private var suche = ""
     @State private var zuLoeschen: Abo?
+    /// Gekündigt-Box in der Übersicht: beim Start zu, bleibt offen bis man sie schließt
+    @State private var gekuendigtOffen = false
     /// Frisch angelegtes Abo: Namensfeld bekommt den Fokus
     @State private var neuAngelegt: PersistentIdentifier?
     @FocusState private var sucheAktiv: Bool
-    @AppStorage("vorlauf1") private var vorlauf1 = 14
-    @AppStorage("vorlauf2") private var vorlauf2 = 3
+    @AppStorage(StandardErinnerung.ersteSchluessel) private var standard1 = 0
+    @AppStorage(StandardErinnerung.zweiteSchluessel) private var standard2 = -1
     @AppStorage("sortFeld") private var sortFeld: SortFeld = .name
     @AppStorage("sortUmgekehrt") private var sortUmgekehrt = false
 
-    private var dringlichkeit: Dringlichkeit { Dringlichkeit(vorlauf1, vorlauf2) }
+    /// Farben der Fristen: orange ab 14 Tagen, rot ab 3 Tagen (unabhängig von den Mitteilungen)
+    private var dringlichkeit: Dringlichkeit { Dringlichkeit(14, 3) }
 
     private var gefiltert: [Abo] {
         let s = suche.trimmingCharacters(in: .whitespaces)
@@ -36,7 +39,7 @@ struct ContentView: View {
             "\(a.uuid)|\(a.name)|\(a.kuendigenBisFest?.timeIntervalSince1970 ?? 0)|\(a.statusRaw)|\(a.spaetestensKuendigenBis?.timeIntervalSince1970 ?? 0)|"
                 + "\(a.erledigtFuerFrist?.timeIntervalSince1970 ?? 0)|\(a.erneutErinnernAm?.timeIntervalSince1970 ?? 0)"
         }
-        return teile.joined(separator: ";") + "#\(vorlauf1)#\(vorlauf2)"
+        return teile.joined(separator: ";") + "#\(standard1)#\(standard2)"
     }
 
     var body: some View {
@@ -56,6 +59,7 @@ struct ContentView: View {
                             .id(abo.persistentModelID)
                     } else {
                         UebersichtView(abos: abos, kategorie: $kategorieFilter, auswahl: $auswahl,
+                                       gekuendigtOffen: $gekuendigtOffen,
                                        dringlichkeit: dringlichkeit, neu: neu,
                                        loeschen: { zuLoeschen = $0 })
                     }
@@ -264,9 +268,13 @@ struct DashboardView: View {
     @Binding var kategorie: String?
     let dringlichkeit: Dringlichkeit
     @AppStorage("zeitraumJahr") private var jahr = false
+    @AppStorage("kostenEinheit") private var einheit: KostenEinheit = .monat
 
     private var aktive: [Abo] { abos.filter(\.istAktiv) }
-    private var faktor: Double { jahr ? 12 : 1 }
+    private var faktor: Double { jahr ? 12 : einheit.faktor }
+    private var monatOderJahr: Binding<KostenAnsicht> {
+        Binding(get: { jahr ? .jahr : .monat }, set: { jahr = $0 == .jahr })
+    }
     private var summe: Double { aktive.compactMap(\.proMonat).reduce(0, +) * faktor }
     private var ohneBetrag: Int { aktive.filter { $0.betrag == nil }.count }
     private var kategorien: [KategorieSumme] { Auswertung.kategorien(abos) }
@@ -281,8 +289,11 @@ struct DashboardView: View {
             if l.frist != r.frist { return l.frist < r.frist }
             return l.abo.name < r.abo.name
         }
-        return Array(liste.prefix(4))
+        return liste
     }
+
+    /// Erstes sichtbares Kalenderblatt für die Pfeil-Knöpfe
+    @State private var fristStart = 0
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
@@ -303,13 +314,7 @@ struct DashboardView: View {
                     .font(.caption.weight(.medium))
                     .foregroundStyle(.tertiary)
                 Spacer()
-                Picker("Zeitraum", selection: $jahr) {
-                    Text("Monat").tag(false)
-                    Text("Jahr").tag(true)
-                }
-                .pickerStyle(.segmented)
-                .labelsHidden()
-                .fixedSize()
+                KostenUmschalter(ansicht: monatOderJahr, kompakt: true)
             }
             Spacer(minLength: 0)
             Text(Format.euro(summe))
@@ -319,7 +324,7 @@ struct DashboardView: View {
                 .minimumScaleFactor(0.6)
                 .contentTransition(.numericText())
                 .animation(.easeOut(duration: 0.18), value: jahr)
-            Text((jahr ? "pro Jahr" : "pro Monat") + " · \(Format.anzahl(aktive.count, "aktives Abo", "aktive Abos"))")
+            Text((jahr ? "pro Jahr" : einheit.text) + " · \(Format.anzahl(aktive.count, "aktives Abo", "aktive Abos"))")
                 .font(.callout)
                 .foregroundStyle(.secondary)
             Spacer(minLength: 0)
@@ -361,21 +366,45 @@ struct DashboardView: View {
     }
 
     // Nächste Fristen wie Blätter eines Wandkalenders
+    /// Alle anstehenden Fristen; nach rechts scrollen (Trackpad) oder mit den Pfeilen blättern
     private var fristen: some View {
-        Karte {
-            Text("Nächste Kündigungsfristen").font(.headline.weight(.medium))
-            if naechsteFristen.isEmpty {
+        let liste = naechsteFristen
+        return Karte {
+            HStack(spacing: 8) {
+                Text("Nächste Kündigungsfristen").font(.headline.weight(.medium))
+                if liste.count > 0 {
+                    Text("\(liste.count)").font(.caption).monospacedDigit().foregroundStyle(.tertiary)
+                }
+                Spacer()
+                if liste.count > 4 {
+                    Button { fristStart = max(0, fristStart - 3) } label: { Image(systemName: "chevron.left") }
+                        .disabled(fristStart == 0)
+                        .help("Frühere Fristen")
+                    Button { fristStart = min(liste.count - 1, fristStart + 3) } label: { Image(systemName: "chevron.right") }
+                        .disabled(fristStart >= liste.count - 4)
+                        .help("Spätere Fristen")
+                }
+            }
+            .buttonStyle(.borderless)
+            if liste.isEmpty {
                 Spacer(minLength: 0)
                 Text("Keine Fristen hinterlegt").foregroundStyle(.secondary)
                 Spacer(minLength: 0)
             } else {
                 Spacer(minLength: 0)
-                HStack(alignment: .top, spacing: 8) {
-                    ForEach(naechsteFristen, id: \.abo.persistentModelID) { eintrag in
-                        fristBlatt(eintrag.abo, eintrag.frist)
+                ScrollViewReader { leser in
+                    ScrollView(.horizontal) {
+                        HStack(alignment: .top, spacing: 8) {
+                            ForEach(Array(liste.enumerated()), id: \.offset) { i, eintrag in
+                                fristBlatt(eintrag.abo, eintrag.frist)
+                                    .frame(width: 128)
+                                    .id(i)
+                            }
+                        }
                     }
-                    ForEach(naechsteFristen.count..<4, id: \.self) { _ in
-                        Color.clear.frame(maxWidth: .infinity)
+                    .scrollIndicators(.automatic)
+                    .onChange(of: fristStart) { _, neu in
+                        withAnimation(.easeOut(duration: 0.25)) { leser.scrollTo(neu, anchor: .leading) }
                     }
                 }
                 .padding(.horizontal, -8)

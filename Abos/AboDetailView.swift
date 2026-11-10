@@ -18,12 +18,14 @@ struct AboDetailView: View {
     @State private var eigeneFrist = false
     @State private var eigeneVerlaengerung = false
     @State private var mitteilungen: Mitteilungen.Zustand = .bleibt
-    @AppStorage("vorlauf1") private var vorlauf1 = 14
-    @AppStorage("vorlauf2") private var vorlauf2 = 3
+    // Beobachtet, damit „Standard: …“ sofort stimmt, wenn die Einstellungen sich ändern
+    @AppStorage(StandardErinnerung.ersteSchluessel) private var standard1 = 0
+    @AppStorage(StandardErinnerung.zweiteSchluessel) private var standard2 = -1
 
     var body: some View {
+        // Oben bleibt nur eine schmale Leiste; Name, Kennzahlen und Verlauf scrollen mit
         VStack(spacing: 0) {
-            kopf
+            leiste
             Divider()
             formular
         }
@@ -36,10 +38,10 @@ struct AboDetailView: View {
         }
     }
 
-    // MARK: - Kopf: zurück, Name, Kategorie, nächste Schritte, Kennzahlen
+    // MARK: - Feste Leiste: zurück, Name, nächste Schritte
 
-    private var kopf: some View {
-        VStack(alignment: .leading, spacing: 16) {
+    private var leiste: some View {
+        HStack(spacing: 12) {
             Button(action: zurueck) {
                 HStack(spacing: 4) {
                     Image(systemName: "chevron.left").fontWeight(.medium)
@@ -50,34 +52,44 @@ struct AboDetailView: View {
             .buttonStyle(.plain)
             .foregroundStyle(Color.accentColor)
             .help("Zurück zu \(zurueckTitel) (⌘[ oder Esc)")
-
-            HStack(alignment: .top, spacing: 16) {
-                VStack(alignment: .leading, spacing: 4) {
-                    TextField("Name", text: $abo.name, prompt: Text("Name des Abos"))
-                        .textFieldStyle(.plain)
-                        .font(.system(size: 22, weight: .medium))
-                        .focused($nameFokus)
-                    HStack(spacing: 8) {
-                        KategorieMenue(abo: abo, alle: alle)
-                        if !abo.istAktiv {
-                            Text(abo.gekuendigtAm.map { "Gekündigt am \(Format.datum($0))" } ?? "Gekündigt")
-                                .font(.caption.weight(.medium))
-                                .foregroundStyle(.secondary)
-                                .padding(.horizontal, 6)
-                                .padding(.vertical, 2)
-                                .background(Color.primary.opacity(0.08), in: RoundedRectangle(cornerRadius: 4))
-                        }
-                    }
-                }
-                Spacer(minLength: 8)
-                aktionen
-            }
-
-            kennzahlen
+            Text(abo.name.isEmpty ? "Neues Abo" : abo.name)
+                .fontWeight(.medium)
+                .lineLimit(1)
+                .foregroundStyle(.secondary)
+            Spacer(minLength: 8)
+            aktionen
         }
         .padding(.horizontal, 24)
-        .padding(.top, 16)
-        .padding(.bottom, 16)
+        .padding(.vertical, 10)
+    }
+
+    // MARK: - Kopf im Formular: Name, Kategorie, Kennzahlen (scrollt mit)
+
+    private var kopf: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: 4) {
+                TextField("Name", text: $abo.name, prompt: Text("Name des Abos"))
+                    .labelsHidden()
+                    .textFieldStyle(.plain)
+                    .multilineTextAlignment(.leading)
+                    .font(.system(size: 22, weight: .medium))
+                    .focused($nameFokus)
+                HStack(spacing: 8) {
+                    KategorieMenue(abo: abo, alle: alle)
+                    if !abo.istAktiv {
+                        Text(abo.gekuendigtAm.map { "Gekündigt am \(Format.datum($0))" } ?? "Gekündigt")
+                            .font(.caption.weight(.medium))
+                            .foregroundStyle(.secondary)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(Color.primary.opacity(0.08), in: RoundedRectangle(cornerRadius: 4))
+                    }
+                }
+            }
+            Divider()
+            kennzahlen
+        }
+        .padding(.vertical, 4)
     }
 
     /// Der naheliegende nächste Schritt: kündigen (Seite oder E-Mail), als gekündigt markieren oder reaktivieren
@@ -110,7 +122,6 @@ struct AboDetailView: View {
                 .help("Das Abo läuft wieder und zählt zu den aktiven Kosten")
             }
         }
-        .controlSize(.large)
     }
 
     /// Vorformulierte Kündigung; verschickt wird sie erst im Mailprogramm
@@ -138,10 +149,6 @@ struct AboDetailView: View {
             trenner
             fristKennzahl
         }
-        .padding(.vertical, 12)
-        .padding(.horizontal, 16)
-        .background(Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: 12))
-        .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(Color.primary.opacity(0.08)))
     }
 
     private var trenner: some View {
@@ -235,9 +242,11 @@ struct AboDetailView: View {
 
     private var formular: some View {
         Form {
-            // Ganz oben: wie sich die Kosten dieses Abos über die Zeit aufsummieren
+            Section { kopf }
+
+            // Wie sich die Kosten dieses Abos über die Zeit aufsummieren
             Section {
-                KostenVerlauf(abos: [abo], hoehe: 180)
+                KostenVerlauf(abos: [abo], hoehe: 150)
                     .padding(.vertical, 4)
             } header: {
                 HStack {
@@ -501,9 +510,9 @@ struct AboDetailView: View {
     }
 
     private var standardText: String {
-        let tage = [vorlauf1, vorlauf2].filter { $0 > 0 }.sorted(by: >)
-        guard !tage.isEmpty else { return "Standard (in den Einstellungen aus)" }
-        return "Standard: " + tage.map(String.init).joined(separator: " und ") + " Tage vorher"
+        _ = (standard1, standard2)
+        let b = StandardErinnerung.beschreibung
+        return b == "aus" ? "Standard (in den Einstellungen aus)" : "Standard: \(b)"
     }
 
     // MARK: Kontakt & Links

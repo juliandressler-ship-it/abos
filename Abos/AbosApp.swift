@@ -26,6 +26,7 @@ enum Datenbank {
 @main
 enum Start {
     static func main() {
+        StandardErinnerung.registrieren()
         MainActor.assumeIsolated {
             if CommandLine.arguments.contains("--mcp") {
                 MCPServer().laufen()
@@ -41,7 +42,6 @@ struct AbosApp: App {
     @State private var container = Datenbank.container
 
     init() {
-        UserDefaults.standard.register(defaults: ["vorlauf1": 14, "vorlauf2": 3])
         Umstellung.fristenAnpassen(Datenbank.container.mainContext)
     }
 
@@ -108,21 +108,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
 // MARK: - Einstellungen
 
 struct EinstellungenView: View {
-    @AppStorage("vorlauf1") private var vorlauf1 = 14
-    @AppStorage("vorlauf2") private var vorlauf2 = 3
+    @AppStorage(StandardErinnerung.ersteSchluessel) private var erste = 0
+    @AppStorage(StandardErinnerung.zweiteSchluessel) private var zweite = -1
     @State private var berechtigung = "…"
     @AppStorage(Sicherung.letztesBackupSchluessel) private var letztesBackup: Double = 0
 
     var body: some View {
         Form {
-            Section("Erinnerungen vor der Kündigungsfrist") {
-                Stepper(value: $vorlauf1, in: 0...120) {
-                    LabeledContent("Erste Erinnerung", value: vorlauf1 == 0 ? "aus" : "\(vorlauf1) Tage vorher")
+            Section("Standard-Erinnerung") {
+                Picker("Erinnerung", selection: $erste) {
+                    ForEach(StandardErinnerung.optionen, id: \.tage) { Text($0.titel).tag($0.tage) }
                 }
-                Stepper(value: $vorlauf2, in: 0...120) {
-                    LabeledContent("Zweite Erinnerung", value: vorlauf2 == 0 ? "aus" : "\(vorlauf2) Tage vorher")
+                Picker("Zweite Erinnerung", selection: $zweite) {
+                    ForEach(StandardErinnerung.optionen, id: \.tage) { Text($0.titel).tag($0.tage) }
                 }
-                Text("Mitteilungen kommen jeweils um 9:00 Uhr, die eingestellte Zahl an Tagen vor „Spätestens kündigen bis“. 0 = aus.")
+                Text("Gilt für alle Abos, bei denen in der Abo-Karte „Standard“ eingestellt ist. Mitteilungen kommen jeweils um 9:00 Uhr.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }

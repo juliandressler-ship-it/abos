@@ -144,3 +144,42 @@ extension Abo {
         return Double(zahltage(von: start, bis: ende).count) * proZahlung
     }
 }
+
+// MARK: - Einheit für „pro …“
+
+/// Durchschnittskosten umgerechnet auf Monat, Woche, Tag oder Stunde
+enum KostenEinheit: String, CaseIterable, Identifiable {
+    case monat, woche, tag, stunde
+    var id: String { rawValue }
+
+    /// Faktor gegenüber den Kosten pro Monat
+    var faktor: Double {
+        switch self {
+        case .monat: return 1
+        case .woche: return 12.0 / 52.0
+        case .tag: return 12.0 / 365.0
+        case .stunde: return 12.0 / 365.0 / 24.0
+        }
+    }
+
+    var titel: String {
+        switch self {
+        case .monat: return "Pro Monat"
+        case .woche: return "Pro Woche"
+        case .tag: return "Pro Tag"
+        case .stunde: return "Pro Stunde"
+        }
+    }
+
+    var kurz: String {
+        switch self {
+        case .monat: return "Monat"
+        case .woche: return "Woche"
+        case .tag: return "Tag"
+        case .stunde: return "Stunde"
+        }
+    }
+
+    /// „pro Monat“, „pro Tag“ … im Satz
+    var text: String { "pro \(kurz)" }
+}

@@ -243,10 +243,7 @@ extension Abo {
     var erinnerungsVorlaeufe: [Int] {
         switch erinnerungTage {
         case -1: return []
-        case -2:
-            let d = UserDefaults.standard
-            return Array(Set([d.integer(forKey: "vorlauf1"), d.integer(forKey: "vorlauf2")].filter { $0 > 0 }))
-                .sorted(by: >)
+        case -2: return StandardErinnerung.vorlaeufe
         default: return [max(0, erinnerungTage)]
         }
     }
@@ -412,6 +409,10 @@ enum Format {
 
     static func euro(_ wert: Double?) -> String {
         guard let wert else { return "offen" }
+        // Kleine Beträge (z. B. pro Stunde) nicht als 0,00 € zeigen
+        if wert != 0 && abs(wert) < 0.1 {
+            return wert.formatted(.currency(code: "EUR").precision(.fractionLength(2...4)).locale(locale))
+        }
         return wert.formatted(.currency(code: "EUR").locale(locale))
     }
 

@@ -246,6 +246,8 @@ struct UebersichtView: View {
     let abos: [Abo]
     @Binding var kategorie: String?
     @Binding var auswahl: Abo?
+    /// Gekündigt-Box aufgeklappt? Liegt im Fenster, damit sie offen bleibt, bis man sie schließt; beim App-Start zu
+    @Binding var gekuendigtOffen: Bool
     let dringlichkeit: Dringlichkeit
     var neu: () -> Void
     var loeschen: (Abo) -> Void
@@ -256,6 +258,7 @@ struct UebersichtView: View {
     /// Kreisdiagramm (Aufteilung nach Kategorie) oder Linie (Kostenentwicklung über die Zeit)
     @AppStorage("uebersichtDiagramm") private var zeigtVerlauf = false
     @AppStorage("kostenZeitraum") private var zeitraumAktiv = false
+    @AppStorage("kostenEinheit") private var einheit: KostenEinheit = .monat
     @AppStorage("zeitraumVorgabe") private var vorgabe: ZeitraumVorgabe = .dieserMonat
     @AppStorage("zeitraumVon") private var vonWert: Double = 0
     @AppStorage("zeitraumBis") private var bisWert: Double = 0
@@ -275,7 +278,8 @@ struct UebersichtView: View {
         basis.filter { kategorie == nil || Auswertung.kategorieName($0) == kategorie }
     }
     /// Die kleine Gekündigt-Box gibt es nur in der Ansicht „Aktive“; sonst stehen sie in der Tabelle
-    private var zeigtGekuendigtBox: Bool { status == .aktiv && !gekuendigte.isEmpty }
+    /// Die Gekündigt-Box gibt es nur unter „Alle“; bei „Aktive“ sind Gekündigte ganz ausgeblendet
+    private var zeigtGekuendigtBox: Bool { status == .alle && !gekuendigte.isEmpty }
 
     private var titel: String {
         switch status {
@@ -296,7 +300,8 @@ struct UebersichtView: View {
     }
     /// Summe der gezeigten Abos
     private var summe: Double { inKategorie.compactMap(wert).reduce(0, +) }
-    private var faktor: Double { jahr ? 12 : 1 }
+    /// Faktor gegenüber „pro Monat“: Jahr ×12, sonst die gewählte Einheit (Woche, Tag, Stunde)
+    private var faktor: Double { jahr ? 12 : einheit.faktor }
 
     // MARK: Kosten: pro Monat, pro Jahr oder ein bestimmter Zeitraum
 
@@ -330,7 +335,7 @@ struct UebersichtView: View {
     /// Der Wert eines Abos in der gewählten Ansicht
     private func wert(_ abo: Abo) -> Double? {
         switch ansicht {
-        case .monat: return abo.proMonat
+        case .monat: return abo.proMonat.map { $0 * einheit.faktor }
         case .jahr: return abo.proJahr
         case .zeitraum: return abo.kosten(von: bereich.start, bis: bereich.ende)
         }
@@ -339,7 +344,7 @@ struct UebersichtView: View {
     /// „pro Monat“, „pro Jahr“ oder „im November 2026“
     private var zeitraum: String {
         switch ansicht {
-        case .monat: return "pro Monat"
+        case .monat: return einheit.text
         case .jahr: return "pro Jahr"
         case .zeitraum:
             switch vorgabe {
@@ -413,7 +418,7 @@ struct UebersichtView: View {
                         }
                         .frame(maxWidth: 440, alignment: .leading)
                     }
-                    if zeigtGekuendigtBox && gekuendigtGross { gekuendigtGrossAnsicht }
+                    if zeigtGekuendigtBox && gekuendigtOffen && gekuendigtGross { gekuendigtGrossAnsicht }
                 }
                 aboListe
             }
@@ -454,13 +459,7 @@ struct UebersichtView: View {
                     VerlaufZeitraumPicker()
                 }
             } else {
-                Picker("Kosten", selection: ansichtBindung) {
-                    ForEach(KostenAnsicht.allCases) { Text($0.titel).tag($0) }
-                }
-                .pickerStyle(.segmented)
-                .labelsHidden()
-                .fixedSize()
-                .help("Durchschnitt pro Monat oder Jahr – oder die tatsächlichen Zahlungen in einem Zeitraum")
+                KostenUmschalter(ansicht: ansichtBindung)
             }
             if !zeigtVerlauf && ansicht == .zeitraum {
                 HStack(spacing: 12) {
@@ -592,18 +591,33 @@ struct UebersichtView: View {
 
     private func gekuendigtKopf(gross: Bool) -> some View {
         HStack(alignment: .center, spacing: 8) {
-            Text("Gekündigt").font(.headline.weight(.medium))
-            Text("\(gekuendigte.count)")
-                .font(.caption)
-                .monospacedDigit()
-                .foregroundStyle(.tertiary)
-            Spacer()
-            if gespart > 0 {
-                Text(ansicht == .zeitraum ? "spart \(Format.euro(gespart)) pro Monat"
-                                          : "spart \(Format.euro(gespart * faktor)) \(zeitraum)")
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
+            // Klick auf die Überschrift klappt auf und zu
+            Button {
+                withAnimation(.easeOut(duration: 0.2)) { gekuendigtOffen.toggle() }
+            } label: {
+                HStack(spacing: 8) {
+                    Image(systemName: "chevron.right")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                        .rotationEffect(.degrees(gekuendigtOffen ? 90 : 0))
+                    Text("Gekündigt").font(.headline.weight(.medium))
+                    Text("\(gekuendigte.count)")
+                        .font(.caption)
+                        .monospacedDigit()
+                        .foregroundStyle(.tertiary)
+                    Spacer()
+                    if gespart > 0 {
+                        Text(ansicht == .zeitraum ? "spart \(Format.euro(gespart)) pro Monat"
+                                                  : "spart \(Format.euro(gespart * faktor)) \(zeitraum)")
+                            .font(.callout)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .contentShape(Rectangle())
             }
+            .buttonStyle(.plain)
+            .help(gekuendigtOffen ? "Zuklappen" : "Gekündigte Abos zeigen")
+            if gekuendigtOffen {
             Button {
                 withAnimation(.easeOut(duration: 0.2)) { gekuendigtGross.toggle() }
             } label: {
@@ -614,6 +628,7 @@ struct UebersichtView: View {
             }
             .buttonStyle(.borderless)
             .help(gross ? "Verkleinern" : "Vergrößern: alle gekündigten Abos mit Details")
+            }
         }
     }
 
@@ -623,6 +638,7 @@ struct UebersichtView: View {
         let ueberlauf = gekuendigte.count > gekuendigtSichtbar
         return VStack(alignment: .leading, spacing: 8) {
             gekuendigtKopf(gross: false)
+            if gekuendigtOffen {
             Group {
                 if ueberlauf {
                     ScrollView {
@@ -644,6 +660,7 @@ struct UebersichtView: View {
                 Text("\(gekuendigte.count - gekuendigtSichtbar) weitere – scrollen oder vergrößern")
                     .font(.caption)
                     .foregroundStyle(.tertiary)
+            }
             }
         }
         .padding(16)

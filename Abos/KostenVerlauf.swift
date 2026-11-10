@@ -86,8 +86,10 @@ struct VerlaufZeitraumPicker: View {
             if eigen {
                 HStack(spacing: 4) {
                     TextField("Jahre", value: $eigeneJahre, format: .number)
+                        .labelsHidden()
+                        .textFieldStyle(.roundedBorder)
                         .multilineTextAlignment(.trailing)
-                        .frame(width: 44)
+                        .frame(width: 48)
                         .onSubmit { eigeneJahre = min(100, max(1, eigeneJahre)) }
                     Stepper("Jahre", value: $eigeneJahre, in: 1...100).labelsHidden()
                     Text("Jahre").foregroundStyle(.secondary)
