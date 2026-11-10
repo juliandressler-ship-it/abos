@@ -488,16 +488,26 @@ struct UebersichtView: View {
     /// Aufsummierte Kosten der gewählten Abos (Status und Kategorie wie oben gewählt)
     private var verlaufAnsicht: some View {
         VStack(alignment: .leading, spacing: 12) {
-            HStack(alignment: .firstTextBaseline) {
-                Text(titel).font(.title3.weight(.medium))
-                Text("aufsummiert ab „Abo seit“, mit Kündigungen und Wiederaufnahmen")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                Spacer()
-                if kategorie != nil {
-                    Button("Alle Kategorien") { kategorie = nil }
-                        .buttonStyle(.link)
+            HStack(alignment: .center, spacing: 12) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(titel).font(.title3.weight(.medium))
+                    Text("aufsummiert ab „Abo seit“, mit Kündigungen und Wiederaufnahmen")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
+                Spacer()
+                // Kategorie direkt hier wählen, z. B. nur Versicherungen
+                Picker("Kategorie", selection: $kategorie) {
+                    Text("Alle Kategorien").tag(String?.none)
+                    Divider()
+                    ForEach(kategorien.map(\.name).sorted { $0.localizedStandardCompare($1) == .orderedAscending },
+                            id: \.self) { name in
+                        Text(name).tag(String?.some(name))
+                    }
+                }
+                .labelsHidden()
+                .fixedSize()
+                .help("Verlauf für alle oder eine bestimmte Kategorie")
             }
             KostenVerlauf(abos: inKategorie, hoehe: 260)
         }

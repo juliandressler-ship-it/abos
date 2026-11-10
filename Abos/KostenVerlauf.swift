@@ -39,7 +39,7 @@ enum Verlauf {
         var punkte: [VerlaufPunkt] = []
         var summe = 0.0
         var monat = start
-        while monat <= letzterMonat && punkte.count < 600 {
+        while monat <= letzterMonat && punkte.count < 1500 {
             let wert = proMonat[monat] ?? 0
             summe += wert
             punkte.append(VerlaufPunkt(monat: monat, imMonat: wert, kumuliert: summe))
@@ -59,19 +59,45 @@ enum Verlauf {
 /// Wie weit der Verlauf in die Zukunft reicht; gilt für Übersicht und Abo-Karten gemeinsam
 struct VerlaufZeitraumPicker: View {
     @AppStorage("verlaufJahre") private var jahre = 3
+    @AppStorage("verlaufEigen") private var eigen = false
+    @AppStorage("verlaufEigeneJahre") private var eigeneJahre = 20
+
+    /// 0 steht für „Eigene“
+    private var auswahl: Binding<Int> {
+        Binding(get: { eigen ? 0 : jahre },
+                set: { neu in
+                    if neu == 0 { eigen = true } else { eigen = false; jahre = neu }
+                })
+    }
 
     var body: some View {
-        Picker("Prognose", selection: $jahre) {
-            Text("1 Jahr").tag(1)
-            Text("3 Jahre").tag(3)
-            Text("5 Jahre").tag(5)
-            Text("10 Jahre").tag(10)
+        HStack(spacing: 8) {
+            Picker("Prognose", selection: auswahl) {
+                Text("1 Jahr").tag(1)
+                Text("3 Jahre").tag(3)
+                Text("5 Jahre").tag(5)
+                Text("10 Jahre").tag(10)
+                Text("Eigene").tag(0)
+            }
+            .pickerStyle(.segmented)
+            .labelsHidden()
+            .fixedSize()
+            .help("Wie weit der Verlauf in die Zukunft reicht")
+            if eigen {
+                HStack(spacing: 4) {
+                    TextField("Jahre", value: $eigeneJahre, format: .number)
+                        .multilineTextAlignment(.trailing)
+                        .frame(width: 44)
+                        .onSubmit { eigeneJahre = min(100, max(1, eigeneJahre)) }
+                    Stepper("Jahre", value: $eigeneJahre, in: 1...100).labelsHidden()
+                    Text("Jahre").foregroundStyle(.secondary)
+                }
+                .fixedSize()
+                .help("1 bis 100 Jahre in die Zukunft")
+            }
         }
-        .pickerStyle(.segmented)
-        .labelsHidden()
-        .fixedSize()
-        .help("Wie weit der Verlauf in die Zukunft reicht")
     }
+
 }
 
 // MARK: - Diagramm
@@ -81,11 +107,15 @@ struct KostenVerlauf: View {
     let abos: [Abo]
     var hoehe: CGFloat = 240
     var zeigtSummen = true
+    // Beobachtet, damit das Diagramm bei jeder Änderung neu rechnet
     @AppStorage("verlaufJahre") private var jahre = 3
+    @AppStorage("verlaufEigen") private var eigen = false
+    @AppStorage("verlaufEigeneJahre") private var eigeneJahre = 20
     @State private var auswahl: Date?
 
     private var ende: Date {
-        Kalender.de.date(byAdding: .year, value: jahre, to: Date()) ?? Date()
+        let n = eigen ? min(100, max(1, eigeneJahre)) : jahre
+        return Kalender.de.date(byAdding: .year, value: n, to: Date()) ?? Date()
     }
 
     var body: some View {
@@ -165,7 +195,9 @@ struct KostenVerlauf: View {
         }
         .chartXAxis {
             if jahreSpanne > 2 {
-                AxisMarks(values: .stride(by: .year)) { _ in
+                // Bei langen Zeiträumen nur alle 2, 5 oder 10 Jahre beschriften
+                let schritt = jahreSpanne > 40 ? 10 : jahreSpanne > 15 ? 5 : jahreSpanne > 7 ? 2 : 1
+                AxisMarks(values: .stride(by: .year, count: schritt)) { _ in
                     AxisGridLine().foregroundStyle(Color.primary.opacity(0.06))
                     AxisValueLabel(format: .dateTime.year().locale(Format.locale))
                 }

@@ -129,7 +129,7 @@ extension Abo {
         }
         var tage: [Date] = []
         var sicherung = 0
-        while sicherung < 2000, let tag = cal.date(byAdding: .month, value: k * schritt, to: anfang), tag <= grenze {
+        while sicherung < 5000, let tag = cal.date(byAdding: .month, value: k * schritt, to: anfang), tag <= grenze {
             let laeuft = phasen.contains { tag >= $0.von && ($0.bis.map { tag <= $0 } ?? true) }
             if tag >= start && laeuft { tage.append(tag) }
             k += 1
