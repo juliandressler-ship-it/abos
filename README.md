@@ -6,13 +6,15 @@ Alles bleibt auf deinem Mac. Kein Konto, keine Cloud, kein Netzwerk.
 
 ## Was Abos kann
 
-- **Übersicht:** Gesamtkosten pro Monat, pro Jahr oder für einen bestimmten Zeitraum, aufgeteilt nach Kategorie als Kreisdiagramm
+- **Übersicht:** Gesamtkosten pro Monat, Jahr, Woche, Tag oder Stunde – oder die tatsächlichen Zahlungen in einem Zeitraum, aufgeteilt nach Kategorie als Kreisdiagramm
 - **Kündigungsfristen:** „Kündigen bis“ wird aus Verlängerungstag und Frist berechnet – oder du trägst ein festes Datum ein
-- **Erinnerungen:** macOS-Mitteilungen vor der Frist, mit den Knöpfen „Erledigt“, „Gekündigt“ und „In 1 Woche erneut“
-- **Kündigungsverlauf:** wann gekündigt, wann wieder aktiviert
+- **Erinnerungen:** macOS-Mitteilung am Tag der Frist (in den Einstellungen änderbar), mit den Knöpfen „Erledigt“, „Gekündigt“ und „In 1 Woche erneut“
+- **Verlauf:** wann gekündigt, wann wieder aktiviert und wie sich der Preis entwickelt hat – Einträge lassen sich korrigieren und nachtragen
 - **Kündigen per E-Mail:** öffnet eine fertig formulierte Kündigung in deinem Mailprogramm
 - **Auswertung:** aktive, gekündigte oder alle Abos – und was Kündigungen gespart haben
-- **Kostenverlauf:** Liniendiagramm der aufsummierten Kosten über die Zeit – mit Prognose bis zu 100 Jahre, pro Kategorie und in jeder Abo-Karte; Kündigungen und Wiederaufnahmen werden berücksichtigt
+- **Kostenverlauf:** Liniendiagramm der aufsummierten Kosten – bis heute oder mit Prognose bis zu 100 Jahre, pro Kategorie und in jeder Abo-Karte; mit den jeweils gültigen Preisen, Kündigungen und Wiederaufnahmen
+- **Mehrere Abos zusammenrechnen:** mit ⇧, ⌘ oder ⌥ in Seitenleiste oder Tabelle auswählen – die Summe erscheint unten
+- **Tastatur:** ↑ ↓ wechseln das Abo, ← → blättern durch die nächsten Kündigungsfristen, ⌘N, ⌘F, ⌘K, ⌘Z wie gewohnt
 - **Backup:** Export und Import als Datei, Export als Tabelle (CSV) für Excel oder Numbers
 - **Claude:** Claude kann deine Abos lesen, neue anlegen und Sparpotenziale finden (siehe unten)
 
