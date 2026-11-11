@@ -65,6 +65,11 @@ enum Fokus {
                 NotificationCenter.default.post(name: Pfeil.gedrueckt, object: richtung)
                 return nil
             }
+            // In der Seitenleiste gehen ↑ ↓ wie gewohnt durch die Liste; ← → braucht sie nicht – die blättern die Fristen
+            if (fokus is NSTableView || fokus is NSOutlineView) && (richtung == .links || richtung == .rechts) {
+                NotificationCenter.default.post(name: Pfeil.gedrueckt, object: richtung)
+                return nil
+            }
             if fokus is NSText || fokus is NSTableView || fokus is NSOutlineView
                 || fokus is NSDatePicker || fokus is NSSegmentedControl || fokus is NSPopUpButton
                 || fokus is NSStepper || fokus is NSSlider {
