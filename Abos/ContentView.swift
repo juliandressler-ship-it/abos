@@ -10,6 +10,8 @@ struct ContentView: View {
     @State private var kategorieFilter: String?
     @State private var suche = ""
     @State private var zuLoeschen: Abo?
+    /// Zuletzt geöffnetes Abo: die Karte bleibt damit aufgebaut, auch wenn die Übersicht zu sehen ist
+    @State private var zuletztGezeigt: Abo?
     /// Gekündigt-Box in der Übersicht: beim Start zu, bleibt offen bis man sie schließt
     @State private var gekuendigtOffen = false
     /// Frisch angelegtes Abo: Namensfeld bekommt den Fokus
@@ -49,22 +51,31 @@ struct ContentView: View {
             HSplitView {
                 seitenleiste
                     .frame(minWidth: 260, idealWidth: 300, maxWidth: 340)
-                Group {
-                    if let abo = auswahl {
+                // Übersicht und Abo-Karte bleiben beide aufgebaut; ein Klick blendet nur um.
+                // Beim Wechsel zwischen Abos tauscht die Karte nur ihre Werte – nichts wird neu aufgebaut.
+                ZStack {
+                    UebersichtView(abos: abos, kategorie: $kategorieFilter, auswahl: $auswahl,
+                                   gekuendigtOffen: $gekuendigtOffen,
+                                   dringlichkeit: dringlichkeit, neu: neu,
+                                   loeschen: { zuLoeschen = $0 })
+                        .equatable()
+                        .opacity(auswahl == nil ? 1 : 0)
+                        .allowsHitTesting(auswahl == nil)
+                        .accessibilityHidden(auswahl != nil)
+                    if let abo = auswahl ?? zuletztGezeigt {
                         AboDetailView(abo: abo, dringlichkeit: dringlichkeit,
                                       zurueckTitel: kategorieFilter ?? "Übersicht",
                                       fokusName: neuAngelegt == abo.persistentModelID,
                                       zurueck: { auswahl = nil },
                                       loeschen: { zuLoeschen = abo })
-                            .id(abo.persistentModelID)
-                    } else {
-                        UebersichtView(abos: abos, kategorie: $kategorieFilter, auswahl: $auswahl,
-                                       gekuendigtOffen: $gekuendigtOffen,
-                                       dringlichkeit: dringlichkeit, neu: neu,
-                                       loeschen: { zuLoeschen = $0 })
+                            .equatable()
+                            .opacity(auswahl != nil ? 1 : 0)
+                            .allowsHitTesting(auswahl != nil)
+                            .accessibilityHidden(auswahl == nil)
                     }
                 }
                 .frame(minWidth: 620, maxWidth: .infinity, maxHeight: .infinity)
+                .onChange(of: auswahl) { _, neu in if let neu { zuletztGezeigt = neu } }
             }
         }
         .navigationTitle(fensterTitel)
@@ -91,7 +102,22 @@ struct ContentView: View {
         .focusedSceneValue(\.fensterAktionen, FensterAktionen(neu: neu,
                                                               suchen: { sucheAktiv = true },
                                                               loeschen: { zuLoeschen = $0 }))
-        .onAppear { context.undoManager = undoManager }
+        .onAppear {
+            context.undoManager = undoManager
+            Fokus.startFokusLoesen()
+        }
+        // ↑ ↓: durch die Abos in der Reihenfolge der Seitenleiste
+        .onReceive(NotificationCenter.default.publisher(for: Fokus.Pfeil.gedrueckt)) { n in
+            guard let pfeil = n.object as? Fokus.Pfeil, pfeil == .hoch || pfeil == .runter else { return }
+            let reihe = gefiltert.filter(\.istAktiv) + gefiltert.filter { !$0.istAktiv }
+            guard !reihe.isEmpty else { return }
+            if let aktuell = auswahl, let i = reihe.firstIndex(of: aktuell) {
+                let ziel = pfeil == .runter ? min(i + 1, reihe.count - 1) : max(i - 1, 0)
+                auswahl = reihe[ziel]
+            } else {
+                auswahl = pfeil == .runter ? reihe.first : reihe.last
+            }
+        }
         .onChange(of: undoManager) { _, neu in context.undoManager = neu }
         .task { await Mitteilungen.berechtigungAnfragen() }
         .task(id: planSignatur) { Mitteilungen.planen(context: context) }
@@ -165,6 +191,7 @@ struct ContentView: View {
 
     private func loeschen(_ abo: Abo) {
         if auswahl == abo { auswahl = nil }
+        if zuletztGezeigt == abo { zuletztGezeigt = nil }
         zuLoeschen = nil
         context.delete(abo)
         try? context.save()
@@ -175,7 +202,7 @@ struct ContentView: View {
 
 /// Farbe einer Frist richtet sich nach den eingestellten Erinnerungen:
 /// innerhalb des längeren Vorlaufs orange, innerhalb des kürzeren rot, sonst neutral.
-struct Dringlichkeit {
+struct Dringlichkeit: Equatable {
     let bald: Int
     let akut: Int
 
@@ -407,11 +434,20 @@ struct DashboardView: View {
                     .scrollTargetLayout()
                 }
                 .scrollPosition(id: $fristPosition, anchor: .leading)
+                .onReceive(NotificationCenter.default.publisher(for: Fokus.Pfeil.gedrueckt)) { fristPfeil($0, anzahl: liste.count) }
                 .scrollIndicators(.automatic)
                 .padding(.horizontal, -8)
                 .padding(.bottom, -8)
             }
         }
+    }
+
+    /// ← →: ein Kalenderblatt weiter oder zurück
+    private func fristPfeil(_ n: Notification, anzahl: Int) {
+        guard let pfeil = n.object as? Fokus.Pfeil, anzahl > 0 else { return }
+        let pos = fristPosition ?? 0
+        if pfeil == .rechts { fristBlaettern(zu: min(anzahl - 1, pos + 1)) }
+        if pfeil == .links { fristBlaettern(zu: max(0, pos - 1)) }
     }
 
     private func fristBlaettern(zu ziel: Int) {

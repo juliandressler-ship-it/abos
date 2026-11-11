@@ -30,6 +30,13 @@ struct AboDetailView: View {
             formular
         }
         .onAppear { if fokusName { nameFokus = true } }
+        // Die Karte wird für ein anderes Abo wiederverwendet: kurzlebige Zustände zurücksetzen
+        .onChange(of: abo.persistentModelID) { _, _ in
+            verlaufOffen = false
+            eigeneFrist = false
+            eigeneVerlaengerung = false
+            if fokusName { nameFokus = true }
+        }
         // Esc: erst eine laufende Eingabe beenden, beim nächsten Mal zurück zur Übersicht
         .onExitCommand { if !Fokus.beenden() { zurueck() } }
         .task { mitteilungen = await Mitteilungen.zustand() }
@@ -243,9 +250,11 @@ struct AboDetailView: View {
     /// Abschnitte wie in einem Formular, aber in einer Lazy-Liste: nur sichtbare Abschnitte
     /// werden aufgebaut – das macht das Öffnen der Karte deutlich schneller
     private var formular: some View {
+        ScrollViewReader { leser in
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 20) {
                 Abschnitt { kopf }
+                    .id("oben")
 
                 // Wie sich die Kosten dieses Abos über die Zeit aufsummieren
                 Abschnitt {
@@ -321,6 +330,9 @@ struct AboDetailView: View {
             }
             .padding(.horizontal, 24)
             .padding(.vertical, 16)
+        }
+        // Anderes Abo: wieder oben anfangen
+        .onChange(of: abo.persistentModelID) { _, _ in leser.scrollTo("oben", anchor: .top) }
         }
         .labeledContentStyle(ZeilenStil())
         .background(Color(nsColor: .windowBackgroundColor))
@@ -1070,5 +1082,15 @@ struct ZeilenStil: LabeledContentStyle {
             Spacer(minLength: 12)
             configuration.content
         }
+    }
+}
+
+/// Die Karte nur neu berechnen, wenn sich das Abo oder die Anzeige-Parameter ändern
+extension AboDetailView: Equatable {
+    static func == (l: AboDetailView, r: AboDetailView) -> Bool {
+        l.abo.persistentModelID == r.abo.persistentModelID
+            && l.zurueckTitel == r.zurueckTitel
+            && l.fokusName == r.fokusName
+            && l.dringlichkeit == r.dringlichkeit
     }
 }

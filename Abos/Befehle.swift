@@ -7,8 +7,10 @@ import SwiftUI
 @MainActor
 enum Fokus {
     private static var beobachter: Any?
+    private static var tastenBeobachter: Any?
 
     static func einrichten() {
+        tastenEinrichten()
         guard beobachter == nil else { return }
         beobachter = NSEvent.addLocalMonitorForEvents(matching: .leftMouseDown) { ereignis in
             guard let fenster = ereignis.window, let inhalt = fenster.contentView,
@@ -21,12 +23,61 @@ enum Fokus {
         }
     }
 
+    /// Beim Start soll kein Textfeld (z. B. die Suche) den Tastaturfokus haben
+    static func startFokusLoesen() {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+            for fenster in NSApp.windows where fenster.isVisible && !(fenster is NSPanel) {
+                if fenster.firstResponder is NSText { fenster.makeFirstResponder(nil) }
+            }
+        }
+    }
+
     /// Beendet eine laufende Texteingabe; true, wenn es eine gab
     @discardableResult
     static func beenden() -> Bool {
         guard let fenster = NSApp.keyWindow, fenster.firstResponder is NSText else { return false }
         fenster.makeFirstResponder(nil)
         return true
+    }
+
+    /// Pfeiltasten im Hauptfenster: ↑ ↓ wechseln das Abo, ← → blättern in den Fristen.
+    /// Beim Tippen, in Listen und in Menüs/Popovers bleiben die Tasten, wie sie sind.
+    private static func tastenEinrichten() {
+        guard tastenBeobachter == nil else { return }
+        tastenBeobachter = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { ereignis in
+            let richtung: Pfeil?
+            switch ereignis.keyCode {
+            case 126: richtung = .hoch
+            case 125: richtung = .runter
+            case 123: richtung = .links
+            case 124: richtung = .rechts
+            default: richtung = nil
+            }
+            guard let richtung,
+                  ereignis.modifierFlags.intersection([.command, .option, .control, .shift]).isEmpty,
+                  let fenster = ereignis.window, !(fenster is NSPanel),
+                  !String(describing: type(of: fenster)).contains("Popover") else { return ereignis }
+            let fokus = fenster.firstResponder
+            // Im Suchfeld: ↑ ↓ gehen durch die Treffer, ← → bleiben beim Text
+            if let editor = fokus as? NSTextView, let feld = editor.delegate as? NSTextField {
+                let istSuche = (feld.placeholderString ?? "").localizedCaseInsensitiveContains("suchen")
+                guard istSuche, richtung == .hoch || richtung == .runter else { return ereignis }
+                NotificationCenter.default.post(name: Pfeil.gedrueckt, object: richtung)
+                return nil
+            }
+            if fokus is NSText || fokus is NSTableView || fokus is NSOutlineView
+                || fokus is NSDatePicker || fokus is NSSegmentedControl || fokus is NSPopUpButton
+                || fokus is NSStepper || fokus is NSSlider {
+                return ereignis
+            }
+            NotificationCenter.default.post(name: Pfeil.gedrueckt, object: richtung)
+            return nil
+        }
+    }
+
+    enum Pfeil {
+        case hoch, runter, links, rechts
+        static let gedrueckt = Notification.Name("AbosPfeiltaste")
     }
 
     private static func istEingabe(_ ansicht: NSView?) -> Bool {

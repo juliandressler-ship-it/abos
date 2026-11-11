@@ -1201,3 +1201,13 @@ struct KreisDiagramm: View {
     }
 }
 
+/// Die Übersicht nur neu berechnen, wenn sich ihre Eingaben wirklich ändern – nicht bei jedem Klick
+/// auf ein Abo. Änderungen an einzelnen Abos kommen über die Beobachtung der Abo-Werte trotzdem an.
+extension UebersichtView: Equatable {
+    static func == (l: UebersichtView, r: UebersichtView) -> Bool {
+        l.abos.map(\.persistentModelID) == r.abos.map(\.persistentModelID)
+            && l.kategorie == r.kategorie
+            && l.gekuendigtOffen == r.gekuendigtOffen
+            && l.dringlichkeit == r.dringlichkeit
+    }
+}
