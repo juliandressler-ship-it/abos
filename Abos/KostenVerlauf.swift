@@ -29,9 +29,8 @@ enum Verlauf {
 
         var proMonat: [Date: Double] = [:]
         for abo in mitBetrag {
-            guard let betrag = abo.anteilProZahlung else { continue }
             for tag in abo.zahltage(von: start, bis: letzterTag) {
-                proMonat[monatsAnfang(tag), default: 0] += betrag
+                proMonat[monatsAnfang(tag), default: 0] += abo.anteil(am: tag) ?? 0
             }
         }
 

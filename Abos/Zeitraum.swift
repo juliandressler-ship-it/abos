@@ -90,7 +90,7 @@ extension Abo {
                 }
             case .reaktiviert:
                 if beginn == nil { beginn = cal.startOfDay(for: e.datum) }
-            case .angelegt:
+            case .angelegt, .preis:
                 break
             }
         }
@@ -140,8 +140,13 @@ extension Abo {
 
     /// Summe der eigenen Zahlungen im Bereich; nil, wenn der Betrag noch offen ist
     func kosten(von start: Date, bis ende: Date) -> Double? {
-        guard let proZahlung = anteilProZahlung else { return nil }
-        return Double(zahltage(von: start, bis: ende).count) * proZahlung
+        guard betrag != nil else { return nil }
+        return zahltage(von: start, bis: ende).compactMap(anteil(am:)).reduce(0, +)
+    }
+
+    /// Eigener Anteil an der Zahlung an einem Tag – mit dem Preis, der damals galt
+    func anteil(am tag: Date) -> Double? {
+        betrag(am: tag).map { $0 * max(0, anteilProzent) / 100 }
     }
 }
 

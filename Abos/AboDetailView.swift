@@ -232,7 +232,7 @@ struct AboDetailView: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .help("Kündigungsverlauf anzeigen")
+        .help("Verlauf: Kündigungen, Wiederaufnahmen und Preisänderungen")
         .popover(isPresented: $verlaufOffen, arrowEdge: .bottom) {
             KuendigungsVerlauf(abo: abo)
         }
@@ -240,101 +240,137 @@ struct AboDetailView: View {
 
     // MARK: - Formular
 
+    /// Abschnitte wie in einem Formular, aber in einer Lazy-Liste: nur sichtbare Abschnitte
+    /// werden aufgebaut – das macht das Öffnen der Karte deutlich schneller
     private var formular: some View {
-        Form {
-            Section { kopf }
+        ScrollView {
+            LazyVStack(alignment: .leading, spacing: 20) {
+                Abschnitt { kopf }
 
-            // Wie sich die Kosten dieses Abos über die Zeit aufsummieren
-            Section {
-                KostenVerlauf(abos: [abo], hoehe: 150)
-                    .padding(.vertical, 4)
-            } header: {
-                HStack {
-                    Text("Kostenentwicklung")
-                    Spacer()
-                    VerlaufZeitraumPicker()
-                        .controlSize(.small)
+                // Wie sich die Kosten dieses Abos über die Zeit aufsummieren
+                Abschnitt {
+                    KostenVerlauf(abos: [abo], hoehe: 150)
+                } kopfzeile: {
+                    HStack {
+                        Text("Kostenentwicklung")
+                        Spacer()
+                        VerlaufZeitraumPicker()
+                            .controlSize(.small)
+                    }
                 }
-            }
 
-            Section("Kosten") {
-                LabeledContent("Betrag") {
-                    HStack(spacing: 4) {
-                        TextField("Betrag", value: $abo.betrag,
-                                  format: .number.precision(.fractionLength(2)).locale(Format.locale),
-                                  prompt: Text("offen"))
+                Abschnitt("Kosten") {
+                    LabeledContent("Betrag") {
+                        HStack(spacing: 4) {
+                            TextField("Betrag", value: betragBindung,
+                                      format: .number.precision(.fractionLength(2)).locale(Format.locale),
+                                      prompt: Text("offen"))
+                                .labelsHidden()
+                                .multilineTextAlignment(.trailing)
+                                .frame(width: 110)
+                            Text("€")
+                        }
+                    }
+                    LabeledContent("Zahlung") {
+                        Picker("Zahlung", selection: $abo.intervall) {
+                            ForEach(Intervall.allCases) { Text($0.titel).tag($0) }
+                        }
+                        .pickerStyle(.segmented)
+                        .labelsHidden()
+                        .fixedSize()
+                    }
+                    if abo.intervall == .eigen {
+                        LabeledContent("Alle") {
+                            zahlFeld($abo.eigeneMonate, bereich: 1...120, einheit: "Monate")
+                        }
+                    }
+                    LabeledContent("Mein Anteil") {
+                        HStack(spacing: 4) {
+                            TextField("Anteil", value: $abo.anteilProzent,
+                                      format: .number.precision(.fractionLength(0...2)).locale(Format.locale))
+                                .labelsHidden()
+                                .multilineTextAlignment(.trailing)
+                                .frame(width: 60)
+                            Text("%")
+                            Stepper("Anteil", value: $abo.anteilProzent, in: 0...100, step: 5).labelsHidden()
+                        }
+                    }
+                    LabeledContent("Abo seit") {
+                        DatePicker("Abo seit", selection: $abo.startdatum, in: Format.datumsBereich,
+                                   displayedComponents: .date)
                             .labelsHidden()
-                            .multilineTextAlignment(.trailing)
-                            .frame(width: 110)
-                        Text("€")
                     }
                 }
-                Picker("Zahlung", selection: $abo.intervall) {
-                    ForEach(Intervall.allCases) { Text($0.titel).tag($0) }
-                }
-                .pickerStyle(.segmented)
-                if abo.intervall == .eigen {
-                    LabeledContent("Alle") {
-                        zahlFeld($abo.eigeneMonate, bereich: 1...120, einheit: "Monate")
-                    }
-                }
-                LabeledContent("Mein Anteil") {
-                    HStack(spacing: 4) {
-                        TextField("Anteil", value: $abo.anteilProzent,
-                                  format: .number.precision(.fractionLength(0...2)).locale(Format.locale))
-                            .labelsHidden()
-                            .multilineTextAlignment(.trailing)
-                            .frame(width: 60)
-                        Text("%")
-                        Stepper("Anteil", value: $abo.anteilProzent, in: 0...100, step: 5).labelsHidden()
-                    }
-                }
-                DatePicker("Abo seit", selection: $abo.startdatum, in: Format.datumsBereich, displayedComponents: .date)
-            }
 
-            kuendigungSektion
-            erinnerungSektion
-            kontaktSektion
+                kuendigungSektion
+                erinnerungSektion
+                kontaktSektion
 
-            Section("Notizen") {
-                TextEditor(text: $abo.notizen)
-                    .font(.body)
-                    .frame(minHeight: 90)
-            }
+                Abschnitt("Notizen") {
+                    TextEditor(text: $abo.notizen)
+                        .font(.body)
+                        .scrollContentBackground(.hidden)
+                        .frame(minHeight: 90)
+                }
 
-            Section {
-                Button("Abo löschen…", role: .destructive, action: loeschen)
+                Abschnitt {
+                    Button("Abo löschen…", role: .destructive, action: loeschen)
+                        .buttonStyle(.plain)
+                        .foregroundStyle(.red)
+                }
             }
+            .padding(.horizontal, 24)
+            .padding(.vertical, 16)
         }
-        .formStyle(.grouped)
+        .labeledContentStyle(ZeilenStil())
+        .background(Color(nsColor: .windowBackgroundColor))
     }
 
     // MARK: Kündigung
 
     /// Zwei Wege wie im Kalender: eine Regel ab dem Verlängerungstag oder ein festes Datum
     private var kuendigungSektion: some View {
-        Section {
-            Picker("Frist angeben als", selection: fristAlsDatum) {
-                Text("Ab Verlängerung").tag(false)
-                Text("Festes Datum").tag(true)
+        Abschnitt("Kündigung") {
+            LabeledContent("Frist angeben als") {
+                Picker("Frist angeben als", selection: fristAlsDatum) {
+                    Text("Ab Verlängerung").tag(false)
+                    Text("Festes Datum").tag(true)
+                }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+                .fixedSize()
             }
-            .pickerStyle(.segmented)
 
             if abo.kuendigenBisFest != nil {
-                DatePicker("Kündigen bis", selection: festerTermin, in: Format.datumsBereich, displayedComponents: .date)
+                LabeledContent("Kündigen bis") {
+                    DatePicker("Kündigen bis", selection: festerTermin, in: Format.datumsBereich, displayedComponents: .date)
+                        .labelsHidden()
+                }
                 verlaengerungPicker(titel: "Wiederholen")
             } else {
                 if abo.autoVerlaengerung {
-                    DatePicker("Nächste Verlängerung", selection: vertragsende, in: Format.datumsBereich, displayedComponents: .date)
-                        .help("Der Tag, an dem das Abo weiterläuft – meist der Tag der nächsten Zahlung")
+                    LabeledContent("Nächste Verlängerung") {
+                        DatePicker("Nächste Verlängerung", selection: vertragsende, in: Format.datumsBereich,
+                                   displayedComponents: .date)
+                            .labelsHidden()
+                    }
+                    .help("Der Tag, an dem das Abo weiterläuft – meist der Tag der nächsten Zahlung")
                 } else {
-                    DatePicker("Läuft bis einschließlich", selection: letzterTagBindung, in: Format.datumsBereich, displayedComponents: .date)
+                    LabeledContent("Läuft bis einschließlich") {
+                        DatePicker("Läuft bis einschließlich", selection: letzterTagBindung, in: Format.datumsBereich,
+                                   displayedComponents: .date)
+                            .labelsHidden()
+                    }
                 }
                 verlaengerungPicker(titel: "Verlängert sich")
-                Picker("Kündigungsfrist", selection: fristAuswahl) {
-                    ForEach(Self.fristVorgaben, id: \.tag) { Text($0.titel).tag($0.tag) }
-                    Divider()
-                    Text("Eigene …").tag("eigen")
+                LabeledContent("Kündigungsfrist") {
+                    Picker("Kündigungsfrist", selection: fristAuswahl) {
+                        ForEach(Self.fristVorgaben, id: \.tag) { Text($0.titel).tag($0.tag) }
+                        Divider()
+                        Text("Eigene …").tag("eigen")
+                    }
+                    .labelsHidden()
+                    .fixedSize()
                 }
                 if fristAuswahl.wrappedValue == "eigen" {
                     LabeledContent("Eigene Frist") {
@@ -353,19 +389,21 @@ struct AboDetailView: View {
             }
 
             klartext
-        } header: {
-            Text("Kündigung")
         }
     }
 
     @ViewBuilder
     private func verlaengerungPicker(titel: String) -> some View {
-        Picker(titel, selection: verlaengerungAuswahl) {
-            Text(abo.kuendigenBisFest != nil ? "Nie" : "Nicht automatisch").tag(0)
-            Divider()
-            ForEach(Self.verlaengerungVorgaben, id: \.monate) { Text($0.titel).tag($0.monate) }
-            Divider()
-            Text("Eigene …").tag(-1)
+        LabeledContent(titel) {
+            Picker(titel, selection: verlaengerungAuswahl) {
+                Text(abo.kuendigenBisFest != nil ? "Nie" : "Nicht automatisch").tag(0)
+                Divider()
+                ForEach(Self.verlaengerungVorgaben, id: \.monate) { Text($0.titel).tag($0.monate) }
+                Divider()
+                Text("Eigene …").tag(-1)
+            }
+            .labelsHidden()
+            .fixedSize()
         }
         if verlaengerungAuswahl.wrappedValue == -1 {
             LabeledContent(abo.kuendigenBisFest != nil ? "Alle" : "Um") {
@@ -444,13 +482,22 @@ struct AboDetailView: View {
     // MARK: Erinnerung
 
     private var erinnerungSektion: some View {
-        Section {
-            Toggle("Erinnere mich", isOn: erinnernAn)
+        Abschnitt("Erinnerung") {
+            LabeledContent("Erinnere mich") {
+                Toggle("Erinnere mich", isOn: erinnernAn)
+                    .labelsHidden()
+                    .toggleStyle(.switch)
+                    .controlSize(.small)
+            }
             if abo.erinnerungTage != -1 {
-                Picker("Wann", selection: $abo.erinnerungTage) {
-                    Text(standardText).tag(-2)
-                    Divider()
-                    ForEach(Self.erinnerungVorgaben, id: \.tage) { Text($0.titel).tag($0.tage) }
+                LabeledContent("Wann") {
+                    Picker("Wann", selection: $abo.erinnerungTage) {
+                        Text(standardText).tag(-2)
+                        Divider()
+                        ForEach(Self.erinnerungVorgaben, id: \.tage) { Text($0.titel).tag($0.tage) }
+                    }
+                    .labelsHidden()
+                    .fixedSize()
                 }
                 LabeledContent("Nächste Mitteilung") {
                     let termine = abo.erinnerungsTermine()
@@ -463,8 +510,6 @@ struct AboDetailView: View {
                 }
                 mitteilungsHinweis
             }
-        } header: {
-            Text("Erinnerung")
         }
     }
 
@@ -518,7 +563,7 @@ struct AboDetailView: View {
     // MARK: Kontakt & Links
 
     private var kontaktSektion: some View {
-        Section("Kontakt & Links") {
+        Abschnitt("Kontakt & Links") {
             feldZeile("Website", text: $abo.websiteLink, prompt: "https://…",
                       symbol: "arrow.up.right.square", hilfe: "Im Browser öffnen", ziel: Format.url(abo.websiteLink))
             feldZeile("Kündigungs-Link", text: $abo.kuendigungsLink, prompt: "https://…",
@@ -531,6 +576,7 @@ struct AboDetailView: View {
                 HStack(spacing: 4) {
                     TextField("Vertragsnummer", text: $abo.vertragsnummer, prompt: Text("optional"))
                         .labelsHidden()
+                        .frame(maxWidth: 320)
                     Button {
                         NSPasteboard.general.clearContents()
                         NSPasteboard.general.setString(abo.vertragsnummer, forType: .string)
@@ -551,6 +597,7 @@ struct AboDetailView: View {
             HStack(spacing: 4) {
                 TextField(titel, text: text, prompt: Text(prompt))
                     .labelsHidden()
+                    .frame(maxWidth: 320)
                 Button {
                     if let ziel { openURL(ziel) }
                 } label: {
@@ -575,6 +622,11 @@ struct AboDetailView: View {
     }
 
     // MARK: - Bindungen
+
+    /// Betrag über `betragAendern`, damit Preisänderungen im Verlauf landen
+    private var betragBindung: Binding<Double?> {
+        Binding(get: { abo.betrag }, set: { abo.betragAendern($0) })
+    }
 
     private var fristAlsDatum: Binding<Bool> {
         Binding(get: { abo.kuendigenBisFest != nil },
@@ -730,13 +782,14 @@ struct KuendigungsVerlauf: View {
     @State private var nachtragenOffen = false
     @State private var neuArt: VerlaufEintrag.Art = .gekuendigt
     @State private var neuDatum = Date()
+    @State private var neuBetrag: Double?
     @State private var leerenFragen = false
 
     var body: some View {
         let eintraege = abo.verlauf
         VStack(alignment: .leading, spacing: 12) {
             VStack(alignment: .leading, spacing: 2) {
-                Text("Kündigungsverlauf").font(.headline.weight(.medium))
+                Text("Verlauf").font(.headline.weight(.medium))
                 Text(abo.name.isEmpty ? "Ohne Namen" : abo.name)
                     .font(.callout)
                     .foregroundStyle(.secondary)
@@ -799,13 +852,31 @@ struct KuendigungsVerlauf: View {
         VStack(alignment: .leading, spacing: 8) {
             Picker("Ereignis", selection: $neuArt) {
                 Text("Gekündigt").tag(VerlaufEintrag.Art.gekuendigt)
-                Text("Wieder aktiviert").tag(VerlaufEintrag.Art.reaktiviert)
+                Text("Aktiviert").tag(VerlaufEintrag.Art.reaktiviert)
+                Text("Preis").tag(VerlaufEintrag.Art.preis)
                 Text("Angelegt").tag(VerlaufEintrag.Art.angelegt)
             }
             .pickerStyle(.segmented)
             .labelsHidden()
             DatePicker("Zeitpunkt", selection: $neuDatum, in: ...Date(), displayedComponents: [.date, .hourAndMinute])
-            Text("Ändert nur den Verlauf, nicht ob das Abo gerade aktiv oder gekündigt ist")
+            if neuArt == .preis {
+                HStack(spacing: 4) {
+                    Text("Neuer Betrag")
+                    Spacer()
+                    TextField("Betrag", value: $neuBetrag,
+                              format: .number.precision(.fractionLength(2)).locale(Format.locale), prompt: Text("0,00"))
+                        .labelsHidden()
+                        .multilineTextAlignment(.trailing)
+                        .frame(width: 90)
+                    Text("€ \(abo.intervall.titel.lowercased())")
+                }
+                Text("Vorher galt \(Format.euro(abo.betrag(am: neuDatum))) – ab diesem Zeitpunkt rechnet der Kostenverlauf mit dem neuen Betrag")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Text(neuArt == .preis ? "Der aktuelle Betrag des Abos bleibt unverändert"
+                                  : "Ändert nur den Verlauf, nicht ob das Abo gerade aktiv oder gekündigt ist")
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -813,9 +884,17 @@ struct KuendigungsVerlauf: View {
                 Spacer()
                 Button("Abbrechen") { nachtragenOffen = false }
                 Button("Hinzufügen") {
-                    abo.protokollieren(VerlaufEintrag(datum: neuDatum, art: neuArt, quelle: .app))
+                    if neuArt == .preis {
+                        abo.protokollieren(VerlaufEintrag(datum: neuDatum, art: .preis, quelle: .app,
+                                                          betrag: neuBetrag, alterBetrag: abo.betrag(am: neuDatum),
+                                                          intervall: abo.intervallRaw))
+                    } else {
+                        abo.protokollieren(VerlaufEintrag(datum: neuDatum, art: neuArt, quelle: .app,
+                                                          betrag: abo.betrag(am: neuDatum), intervall: abo.intervallRaw))
+                    }
                     nachtragenOffen = false
                 }
+                .disabled(neuArt == .preis && neuBetrag == nil)
                 .keyboardShortcut(.defaultAction)
             }
         }
@@ -917,12 +996,79 @@ struct VerlaufZeile: View {
     }
 
     private var detail: String? {
-        guard eintrag.art != .angelegt else { return nil }
+        let intervall = eintrag.intervall.flatMap(Intervall.init(rawValue:))?.titel.lowercased()
+        if eintrag.art == .preis {
+            let neu = Format.euro(eintrag.betrag)
+            let text = eintrag.alterBetrag.map { "\(Format.euro($0)) → \(neu)" } ?? "neu \(neu)"
+            return text + (intervall.map { " \($0)" } ?? "")
+        }
         var teile: [String] = []
         if eintrag.art == .gekuendigt, let ende = eintrag.vertragsende {
             teile.append("läuft bis \(Format.datum(Abo.letzterTag(vor: ende)))")
         }
-        if let frist = eintrag.frist { teile.append("Frist \(Format.datum(frist))") }
+        if eintrag.art != .angelegt, let frist = eintrag.frist { teile.append("Frist \(Format.datum(frist))") }
+        if let b = eintrag.betrag { teile.append("Preis \(Format.euro(b))" + (intervall.map { " \($0)" } ?? "")) }
         return teile.isEmpty ? nil : teile.joined(separator: " · ")
+    }
+}
+
+// MARK: - Formular-Bausteine (schnell, weil ohne macOS-„Form“)
+
+/// Ein Abschnitt wie im grouped Form: Überschrift und eine Karte mit Zeilen, getrennt durch Linien
+struct Abschnitt<Inhalt: View, Kopf: View>: View {
+    let inhalt: Inhalt
+    let kopf: Kopf
+
+    init(@ViewBuilder _ inhalt: () -> Inhalt, @ViewBuilder kopfzeile: () -> Kopf) {
+        self.inhalt = inhalt()
+        self.kopf = kopfzeile()
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            kopf
+                .font(.headline.weight(.medium))
+                .padding(.horizontal, 4)
+            _VariadicView.Tree(MitTrennlinien()) { inhalt }
+                .padding(.horizontal, 12)
+                .background(Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: 10))
+                .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(Color.primary.opacity(0.08)))
+        }
+    }
+}
+
+extension Abschnitt where Kopf == EmptyView {
+    init(@ViewBuilder _ inhalt: () -> Inhalt) {
+        self.init(inhalt, kopfzeile: { EmptyView() })
+    }
+}
+
+extension Abschnitt where Kopf == Text {
+    init(_ titel: String, @ViewBuilder _ inhalt: () -> Inhalt) {
+        self.init(inhalt, kopfzeile: { Text(titel) })
+    }
+}
+
+/// Setzt eine feine Linie zwischen die Zeilen eines Abschnitts
+private struct MitTrennlinien: _VariadicView_UnaryViewRoot {
+    func body(children: _VariadicView.Children) -> some View {
+        let letzte = children.last?.id
+        VStack(alignment: .leading, spacing: 0) {
+            ForEach(children) { zeile in
+                zeile.padding(.vertical, 8)
+                if zeile.id != letzte { Divider() }
+            }
+        }
+    }
+}
+
+/// Bezeichnung links, Bedienelement rechts – wie in den Systemeinstellungen
+struct ZeilenStil: LabeledContentStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        HStack(alignment: .center, spacing: 12) {
+            configuration.label
+            Spacer(minLength: 12)
+            configuration.content
+        }
     }
 }

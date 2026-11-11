@@ -850,6 +850,9 @@ struct UebersichtView: View {
             .help("Alle Details öffnen")
         }
         .modifier(ZeilenHover(hoehe: 40))
+        // Ein Klick irgendwo in die Zeile öffnet das Abo; Felder und Menüs darin reagieren weiter selbst
+        .contentShape(Rectangle())
+        .onTapGesture { auswahl = abo }
         .contextMenu { AboMenue(abo: abo, oeffnen: { auswahl = abo }, loeschen: { loeschen(abo) }) }
     }
 }

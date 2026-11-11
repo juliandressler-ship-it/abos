@@ -218,11 +218,40 @@ extension Abo {
     /// Eigene Kosten pro Monat (faktor 1) oder Jahr (faktor 12) setzen; daraus wird der Betrag
     /// pro Zahlung zurückgerechnet (Intervall und Anteil bleiben gleich)
     func eigeneKostenSetzen(_ wert: Double?, faktor: Double) {
-        guard let wert else { betrag = nil; return }
+        guard let wert else { betragAendern(nil); return }
         if let alt = proMonat.map({ $0 * faktor }), abs(alt - wert) < 0.005 { return }
         let anteil = max(0, anteilProzent) / 100
         guard anteil > 0 else { return }
-        betrag = max(0, wert) / faktor * Double(monateProIntervall) / anteil
+        betragAendern(max(0, wert) / faktor * Double(monateProIntervall) / anteil)
+    }
+
+    /// Betrag pro Zahlung ändern und die Änderung im Verlauf festhalten.
+    /// Der erste Betrag (vorher „offen“) ist keine Preisänderung. Mehrere Änderungen
+    /// innerhalb weniger Minuten (z. B. Tippfehler) werden zu einem Eintrag zusammengefasst.
+    func betragAendern(_ neu: Double?, quelle: VerlaufEintrag.Quelle = .app) {
+        let alt = betrag
+        betrag = neu
+        guard let alt, let neu, abs(alt - neu) >= 0.005 else { return }
+        var liste = verlauf   // neueste zuerst
+        if let letzter = liste.first, letzter.art == .preis, letzter.quelle == quelle,
+           Date().timeIntervalSince(letzter.datum) < 15 * 60 {
+            liste[0].betrag = neu
+            liste[0].intervall = intervallRaw
+            if let vorher = liste[0].alterBetrag, abs(vorher - neu) < 0.005 { liste.removeFirst() }
+            verlaufSpeichern(liste)
+            return
+        }
+        protokollieren(VerlaufEintrag(art: .preis, quelle: quelle, betrag: neu, alterBetrag: alt, intervall: intervallRaw))
+    }
+
+    /// Betrag pro Zahlung, der an einem Tag galt (aus den Preisänderungen im Verlauf)
+    func betrag(am tag: Date) -> Double? {
+        let aenderungen = verlauf.filter { $0.art == .preis }.sorted { $0.datum < $1.datum }
+        // Die erste Änderung nach dem Tag verrät, was vorher galt
+        if let naechste = aenderungen.first(where: { $0.datum > tag }) {
+            return naechste.alterBetrag ?? betrag
+        }
+        return betrag
     }
 
     /// Ein fester Termin rollt bei automatischer Verlängerung um die Verlängerungsdauer weiter
@@ -269,7 +298,8 @@ extension Abo {
         let ende = naechstesEnde()
         status = .gekuendigt
         erneutErinnernAm = nil
-        protokollieren(VerlaufEintrag(art: .gekuendigt, quelle: quelle, frist: frist, vertragsende: ende))
+        protokollieren(VerlaufEintrag(art: .gekuendigt, quelle: quelle, frist: frist, vertragsende: ende,
+                                      betrag: betrag, intervall: intervallRaw))
     }
 
     /// Ein gekündigtes Abo läuft weiter; alte Erinnerungs-Markierungen werden verworfen
@@ -279,7 +309,7 @@ extension Abo {
         erledigtFuerFrist = nil
         erneutErinnernAm = nil
         protokollieren(VerlaufEintrag(art: .reaktiviert, quelle: quelle, frist: spaetestensKuendigenBis,
-                                      vertragsende: naechstesEnde()))
+                                      vertragsende: naechstesEnde(), betrag: betrag, intervall: intervallRaw))
     }
 
     // MARK: Verlauf
@@ -313,7 +343,7 @@ extension Abo {
         verlaufJSON = ""
     }
 
-    private func verlaufSpeichern(_ liste: [VerlaufEintrag]) {
+    fileprivate func verlaufSpeichern(_ liste: [VerlaufEintrag]) {
         let sortiert = liste.sorted { $0.datum < $1.datum }
         guard !sortiert.isEmpty, let daten = try? VerlaufEintrag.encoder.encode(sortiert) else {
             verlaufJSON = ""
@@ -340,13 +370,14 @@ extension Abo {
 
 struct VerlaufEintrag: Codable, Identifiable, Hashable {
     enum Art: String, Codable {
-        case angelegt, gekuendigt, reaktiviert
+        case angelegt, gekuendigt, reaktiviert, preis
 
         var titel: String {
             switch self {
             case .angelegt: return "Angelegt"
             case .gekuendigt: return "Gekündigt"
             case .reaktiviert: return "Wieder aktiviert"
+            case .preis: return "Preis geändert"
             }
         }
 
@@ -355,6 +386,7 @@ struct VerlaufEintrag: Codable, Identifiable, Hashable {
             case .angelegt: return "plus.circle"
             case .gekuendigt: return "xmark.circle"
             case .reaktiviert: return "arrow.uturn.backward.circle"
+            case .preis: return "eurosign.circle"
             }
         }
     }
@@ -379,6 +411,12 @@ struct VerlaufEintrag: Codable, Identifiable, Hashable {
     var frist: Date?
     /// Nächstes Vertragsende zum Zeitpunkt des Eintrags
     var vertragsende: Date?
+    /// Betrag pro Zahlung zu diesem Zeitpunkt (bei „Preis geändert“: der neue Betrag)
+    var betrag: Double?
+    /// Nur bei „Preis geändert“: der Betrag davor
+    var alterBetrag: Double?
+    /// Zahlungsintervall zu diesem Zeitpunkt (Rohwert von Intervall)
+    var intervall: String?
 
     static let encoder: JSONEncoder = {
         let e = JSONEncoder()

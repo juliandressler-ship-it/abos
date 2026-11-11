@@ -165,7 +165,8 @@ final class MCPServer {
         if let v = a["neuer_name"] as? String, !v.isEmpty { abo.name = v }
         if let v = a["kategorie"] as? String { abo.kategorie = v.trimmingCharacters(in: .whitespaces) }
         if a.keys.contains("betrag") {
-            if a["betrag"] is NSNull { abo.betrag = nil } else if let v = zahl(a["betrag"]) { abo.betrag = max(0, v) }
+            if a["betrag"] is NSNull { abo.betragAendern(nil, quelle: .claude) }
+            else if let v = zahl(a["betrag"]) { abo.betragAendern(max(0, v), quelle: .claude) }
         }
         if let v = a["intervall"] as? String {
             guard let i = Intervall(rawValue: v) else {
@@ -249,7 +250,9 @@ final class MCPServer {
         d["verlauf"] = abo.verlauf.map { e -> [String: Any] in
             ["datum": Self.zeitFormat.string(from: e.datum), "ereignis": e.art.rawValue, "quelle": e.quelle.rawValue,
              "frist_damals": iso(e.frist) ?? NSNull(),
-             "laeuft_bis": iso(e.vertragsende.map(Abo.letzterTag(vor:))) ?? NSNull()]
+             "laeuft_bis": iso(e.vertragsende.map(Abo.letzterTag(vor:))) ?? NSNull(),
+             "betrag": e.betrag.map(runden) ?? NSNull(),
+             "alter_betrag": e.alterBetrag.map(runden) ?? NSNull()]
         }
         return d
     }
