@@ -19,13 +19,15 @@ enum Verlauf {
     }
 
     /// Monatswerte vom ersten „Abo seit“ bis zum Ende des Prognosezeitraums
-    static func punkte(_ abos: [Abo], bis ende: Date) -> [VerlaufPunkt] {
+    /// `genau`: nur Zahlungen bis einschließlich `ende` (für „Heute“), sonst bis Ende jenes Monats
+    static func punkte(_ abos: [Abo], bis ende: Date, genau: Bool = false) -> [VerlaufPunkt] {
         let cal = Kalender.de
         let mitBetrag = abos.filter { $0.betrag != nil }
         guard let erster = mitBetrag.map(\.startdatum).min() else { return [] }
         let start = monatsAnfang(erster)
         let letzterMonat = monatsAnfang(ende)
-        let letzterTag = cal.date(byAdding: DateComponents(month: 1, day: -1), to: letzterMonat) ?? ende
+        let letzterTag = genau ? cal.startOfDay(for: ende)
+            : (cal.date(byAdding: DateComponents(month: 1, day: -1), to: letzterMonat) ?? ende)
 
         var proMonat: [Date: Double] = [:]
         for abo in mitBetrag {
@@ -42,6 +44,10 @@ enum Verlauf {
             summe += wert
             punkte.append(VerlaufPunkt(monat: monat, imMonat: wert, kumuliert: summe))
             monat = cal.date(byAdding: .month, value: 1, to: monat) ?? letzterMonat.addingTimeInterval(1)
+        }
+        // Nur ein Monat? Dann mit 0 € im Monat davor beginnen, damit eine Linie sichtbar ist
+        if punkte.count == 1, let vorher = cal.date(byAdding: .month, value: -1, to: start) {
+            punkte.insert(VerlaufPunkt(monat: vorher, imMonat: 0, kumuliert: 0), at: 0)
         }
         return punkte
     }
@@ -71,27 +77,30 @@ struct VerlaufZeitraumPicker: View {
     @AppStorage("verlaufEigen") private var eigen = false
     @AppStorage("verlaufEigeneJahre") private var eigeneJahre = 20
 
-    /// 0 steht für „Eigene“
+    /// 0 = nur bis heute, -1 = eigene Jahreszahl
     private var auswahl: Binding<Int> {
-        Binding(get: { eigen ? 0 : jahre },
+        Binding(get: { eigen ? -1 : jahre },
                 set: { neu in
-                    if neu == 0 { eigen = true } else { eigen = false; jahre = neu }
+                    if neu == -1 { eigen = true } else { eigen = false; jahre = neu }
                 })
     }
 
     var body: some View {
         HStack(spacing: 8) {
             Picker("Prognose", selection: auswahl) {
+                Text("Heute").tag(0)
                 Text("1 Jahr").tag(1)
-                Text("3 Jahre").tag(3)
-                Text("5 Jahre").tag(5)
                 Text("10 Jahre").tag(10)
-                Text("Eigene").tag(0)
+                Text("Eigene").tag(-1)
             }
             .pickerStyle(.segmented)
             .labelsHidden()
             .fixedSize()
-            .help("Wie weit der Verlauf in die Zukunft reicht")
+            .help("„Heute“ zeigt nur, was bisher bezahlt wurde – sonst mit Prognose in die Zukunft")
+            .onAppear {
+                // Früher gab es 3 und 5 Jahre: solche Werte als „Eigene“ übernehmen
+                if !eigen && ![0, 1, 10].contains(jahre) { eigeneJahre = jahre; eigen = true }
+            }
             if eigen {
                 HStack(spacing: 4) {
                     TextField("Jahre", value: $eigeneJahre, format: .number)
@@ -123,13 +132,16 @@ struct KostenVerlauf: View {
     @AppStorage("verlaufEigen") private var eigen = false
     @AppStorage("verlaufEigeneJahre") private var eigeneJahre = 20
 
+    /// „Heute“: nur bis heute, ohne Prognose
+    private var nurBisHeute: Bool { !eigen && jahre == 0 }
+
     private var ende: Date {
         let n = eigen ? min(100, max(1, eigeneJahre)) : jahre
         return Kalender.de.date(byAdding: .year, value: n, to: Date()) ?? Date()
     }
 
     var body: some View {
-        let punkte = Verlauf.punkte(abos, bis: ende)
+        let punkte = Verlauf.punkte(abos, bis: nurBisHeute ? Date() : ende, genau: nurBisHeute)
         VStack(alignment: .leading, spacing: 12) {
             if punkte.isEmpty || (punkte.last?.kumuliert ?? 0) == 0 {
                 Text("Noch nichts zu zeigen – dafür braucht es einen Betrag und „Abo seit“")
@@ -147,7 +159,13 @@ struct KostenVerlauf: View {
     private func summen(_ punkte: [VerlaufPunkt]) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: 24) {
             kennzahl("Bisher ausgegeben", Format.euro(Verlauf.bisHeute(abos)))
-            kennzahl("Bis \(monatJahr(punkte.last?.monat ?? ende))", Format.euro(punkte.last?.kumuliert))
+            if nurBisHeute {
+                if let erster = punkte.first?.monat {
+                    kennzahl("Seit", monatJahr(erster))
+                }
+            } else {
+                kennzahl("Bis \(monatJahr(punkte.last?.monat ?? ende))", Format.euro(punkte.last?.kumuliert))
+            }
         }
     }
 

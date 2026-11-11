@@ -53,8 +53,10 @@ enum Fokus {
             case 124: richtung = .rechts
             default: richtung = nil
             }
+            let umschalt = ereignis.modifierFlags.contains(.shift)
             guard let richtung,
-                  ereignis.modifierFlags.intersection([.command, .option, .control, .shift]).isEmpty,
+                  ereignis.modifierFlags.intersection([.command, .option, .control]).isEmpty,
+                  !(umschalt && (richtung == .links || richtung == .rechts)),
                   let fenster = ereignis.window, !(fenster is NSPanel),
                   !String(describing: type(of: fenster)).contains("Popover") else { return ereignis }
             let fokus = fenster.firstResponder
@@ -62,7 +64,7 @@ enum Fokus {
             if let editor = fokus as? NSTextView, let feld = editor.delegate as? NSTextField {
                 let istSuche = (feld.placeholderString ?? "").localizedCaseInsensitiveContains("suchen")
                 guard istSuche, richtung == .hoch || richtung == .runter else { return ereignis }
-                NotificationCenter.default.post(name: Pfeil.gedrueckt, object: richtung)
+                NotificationCenter.default.post(name: Pfeil.gedrueckt, object: richtung, userInfo: ["erweitern": umschalt])
                 return nil
             }
             // In der Seitenleiste gehen ↑ ↓ wie gewohnt durch die Liste; ← → braucht sie nicht – die blättern die Fristen
@@ -75,7 +77,7 @@ enum Fokus {
                 || fokus is NSStepper || fokus is NSSlider {
                 return ereignis
             }
-            NotificationCenter.default.post(name: Pfeil.gedrueckt, object: richtung)
+            NotificationCenter.default.post(name: Pfeil.gedrueckt, object: richtung, userInfo: ["erweitern": umschalt])
             return nil
         }
     }

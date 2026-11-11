@@ -12,6 +12,37 @@ struct ContentView: View {
     @State private var zuLoeschen: Abo?
     /// Zuletzt geöffnetes Abo: die Karte bleibt damit aufgebaut, auch wenn die Übersicht zu sehen ist
     @State private var zuletztGezeigt: Abo?
+    /// Mehrfachauswahl (⇧ oder ⌘/⌥): mehrere Abos werden zusammengerechnet
+    @State private var markiert: Set<Abo> = []
+    /// Ausgangspunkt für ⇧-Bereiche (Index in der Reihenfolge der Seitenleiste)
+    @State private var anker: Int?
+    /// Bewegliches Ende des ⇧-Bereichs – wie im Finder wandert nur dieses Ende
+    @State private var bereichEnde: Int?
+
+    /// Reihenfolge wie in der Seitenleiste: erst aktive, dann gekündigte
+    private var reihe: [Abo] { gefiltert.filter(\.istAktiv) + gefiltert.filter { !$0.istAktiv } }
+
+    /// Auswahl der Seitenleiste: ein Abo öffnet die Karte, mehrere zeigen die Summe
+    private var listenAuswahl: Binding<Set<Abo>> {
+        Binding(get: { markiert }, set: { neu in auswahlSetzen(neu) })
+    }
+
+    /// Nach ⇧-Erweiterung: Karte nur bei genau einem Abo
+    private func auswahlSetzenOhneAnker() {
+        if markiert.count == 1, let einziges = markiert.first { if auswahl != einziges { auswahl = einziges } }
+        else if auswahl != nil { auswahl = nil }
+    }
+
+    private func auswahlSetzen(_ neu: Set<Abo>) {
+        markiert = neu
+        if neu.count == 1, let einziges = neu.first {
+            if auswahl != einziges { auswahl = einziges }
+            anker = reihe.firstIndex(of: einziges)
+            bereichEnde = anker
+        } else if auswahl != nil {
+            auswahl = nil
+        }
+    }
     /// Gekündigt-Box in der Übersicht: beim Start zu, bleibt offen bis man sie schließt
     @State private var gekuendigtOffen = false
     /// Frisch angelegtes Abo: Namensfeld bekommt den Fokus
@@ -55,7 +86,7 @@ struct ContentView: View {
                 // Beim Wechsel zwischen Abos tauscht die Karte nur ihre Werte – nichts wird neu aufgebaut.
                 ZStack {
                     UebersichtView(abos: abos, kategorie: $kategorieFilter, auswahl: $auswahl,
-                                   gekuendigtOffen: $gekuendigtOffen,
+                                   gekuendigtOffen: $gekuendigtOffen, markiert: $markiert,
                                    dringlichkeit: dringlichkeit, neu: neu,
                                    loeschen: { zuLoeschen = $0 })
                         .equatable()
@@ -75,7 +106,23 @@ struct ContentView: View {
                     }
                 }
                 .frame(minWidth: 620, maxWidth: .infinity, maxHeight: .infinity)
-                .onChange(of: auswahl) { _, neu in if let neu { zuletztGezeigt = neu } }
+                // Mehrere markiert: Summe der Auswahl unten einblenden
+                .overlay(alignment: .bottom) {
+                    if markiert.count > 1 {
+                        AuswahlLeiste(abos: reihe.filter { markiert.contains($0) },
+                                      aufheben: { markiert = []; anker = nil; bereichEnde = nil })
+                            .transition(.move(edge: .bottom).combined(with: .opacity))
+                    }
+                }
+                .animation(.easeOut(duration: 0.15), value: markiert.count > 1)
+                .onChange(of: auswahl) { _, neu in
+                    if let neu {
+                        zuletztGezeigt = neu
+                        if markiert != [neu] { markiert = [neu]; anker = reihe.firstIndex(of: neu); bereichEnde = anker }
+                    } else if markiert.count == 1 {
+                        markiert = []
+                    }
+                }
             }
         }
         .navigationTitle(fensterTitel)
@@ -109,13 +156,25 @@ struct ContentView: View {
         // ↑ ↓: durch die Abos in der Reihenfolge der Seitenleiste
         .onReceive(NotificationCenter.default.publisher(for: Fokus.Pfeil.gedrueckt)) { n in
             guard let pfeil = n.object as? Fokus.Pfeil, pfeil == .hoch || pfeil == .runter else { return }
-            let reihe = gefiltert.filter(\.istAktiv) + gefiltert.filter { !$0.istAktiv }
+            let reihe = self.reihe
             guard !reihe.isEmpty else { return }
-            if let aktuell = auswahl, let i = reihe.firstIndex(of: aktuell) {
-                let ziel = pfeil == .runter ? min(i + 1, reihe.count - 1) : max(i - 1, 0)
-                auswahl = reihe[ziel]
+            let erweitern = (n.userInfo?["erweitern"] as? Bool) ?? false
+            let schritt = pfeil == .runter ? 1 : -1
+            // Aktuelle Position: das bewegliche Ende, sonst das markierte Abo
+            let position = bereichEnde ?? markiert.compactMap { reihe.firstIndex(of: $0) }.min()
+            guard let position else {
+                auswahlSetzen([pfeil == .runter ? reihe[0] : reihe[reihe.count - 1]])
+                return
+            }
+            let ziel = min(max(position + schritt, 0), reihe.count - 1)
+            if erweitern {
+                let a = anker ?? position
+                anker = a
+                bereichEnde = ziel
+                markiert = Set(reihe[min(a, ziel)...max(a, ziel)])
+                auswahlSetzenOhneAnker()
             } else {
-                auswahl = pfeil == .runter ? reihe.first : reihe.last
+                auswahlSetzen([reihe[ziel]])
             }
         }
         .onChange(of: undoManager) { _, neu in context.undoManager = neu }
@@ -147,7 +206,7 @@ struct ContentView: View {
     private var liste: some View {
         let aktive = gefiltert.filter(\.istAktiv)
         let gekuendigte = gefiltert.filter { !$0.istAktiv }
-        return List(selection: $auswahl) {
+        return List(selection: listenAuswahl) {
             if !aktive.isEmpty {
                 Section {
                     ForEach(aktive) { zeile($0) }

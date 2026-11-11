@@ -248,6 +248,8 @@ struct UebersichtView: View {
     @Binding var auswahl: Abo?
     /// Gekündigt-Box aufgeklappt? Liegt im Fenster, damit sie offen bleibt, bis man sie schließt; beim App-Start zu
     @Binding var gekuendigtOffen: Bool
+    /// Mehrfachauswahl, geteilt mit der Seitenleiste
+    @Binding var markiert: Set<Abo>
     let dringlichkeit: Dringlichkeit
     var neu: () -> Void
     var loeschen: (Abo) -> Void
@@ -264,6 +266,8 @@ struct UebersichtView: View {
     @AppStorage("zeitraumBis") private var bisWert: Double = 0
     @State private var gekuendigtGross = false
     @State private var tabellenSuche = ""
+    /// Ausgangspunkt für ⇧-Klick in der Tabelle
+    @State private var tabellenAnker: Abo?
 
     /// So viele gekündigte Abos zeigt die kleine Box, der Rest ist scrollbar
     private let gekuendigtSichtbar = 3
@@ -794,7 +798,7 @@ struct UebersichtView: View {
         let name = Auswertung.kategorieName(abo)
         return HStack(spacing: 12) {
             HStack(spacing: 8) {
-                NameFeld(abo: abo, oeffnen: { auswahl = abo })
+                NameFeld(abo: abo, oeffnen: { klick(abo) })
                 if !abo.istAktiv {
                     Image(systemName: "xmark.circle")
                         .foregroundStyle(.secondary)
@@ -850,10 +854,30 @@ struct UebersichtView: View {
             .help("Alle Details öffnen")
         }
         .modifier(ZeilenHover(hoehe: 40))
+        .background(markiert.count > 1 && markiert.contains(abo) ? Color.accentColor.opacity(0.14) : .clear,
+                    in: RoundedRectangle(cornerRadius: 8))
         // Ein Klick irgendwo in die Zeile öffnet das Abo; Felder und Menüs darin reagieren weiter selbst
         .contentShape(Rectangle())
-        .onTapGesture { auswahl = abo }
+        .onTapGesture { klick(abo) }
         .contextMenu { AboMenue(abo: abo, oeffnen: { auswahl = abo }, loeschen: { loeschen(abo) }) }
+    }
+
+    /// Klick: öffnen. ⌘ oder ⌥: einzeln dazu/weg. ⇧: Bereich in der Reihenfolge der Tabelle.
+    private func klick(_ abo: Abo) {
+        let tasten = NSEvent.modifierFlags
+        if tasten.contains(.shift) {
+            let anker = tabellenAnker ?? markiert.first ?? abo
+            if let i = tabelle.firstIndex(of: anker), let j = tabelle.firstIndex(of: abo) {
+                markiert = Set(tabelle[min(i, j)...max(i, j)])
+            }
+            tabellenAnker = anker
+        } else if tasten.contains(.command) || tasten.contains(.option) {
+            if markiert.contains(abo) { markiert.remove(abo) } else { markiert.insert(abo) }
+            tabellenAnker = abo
+        } else {
+            tabellenAnker = abo
+            auswahl = abo
+        }
     }
 }
 
@@ -1209,5 +1233,6 @@ extension UebersichtView: Equatable {
             && l.kategorie == r.kategorie
             && l.gekuendigtOffen == r.gekuendigtOffen
             && l.dringlichkeit == r.dringlichkeit
+            && l.markiert == r.markiert
     }
 }
