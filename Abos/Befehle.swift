@@ -12,11 +12,22 @@ enum Fokus {
     static func einrichten() {
         tastenEinrichten()
         guard beobachter == nil else { return }
-        beobachter = NSEvent.addLocalMonitorForEvents(matching: .leftMouseDown) { ereignis in
-            guard let fenster = ereignis.window, let inhalt = fenster.contentView,
-                  fenster.firstResponder is NSText else { return ereignis }
+        beobachter = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDown, .leftMouseUp]) { ereignis in
+            guard let fenster = ereignis.window, let inhalt = fenster.contentView else { return ereignis }
             let punkt = inhalt.superview?.convert(ereignis.locationInWindow, from: nil) ?? ereignis.locationInWindow
-            if !istEingabe(inhalt.hitTest(punkt)) {
+            let ziel = inhalt.hitTest(punkt)
+
+            // ⌥-Klick in einer Liste wirkt wie ⌘-Klick: einzelne Einträge dazu- oder abwählen
+            if ereignis.modifierFlags.contains(.option), istInListe(ziel),
+               let umgebaut = NSEvent.mouseEvent(
+                   with: ereignis.type, location: ereignis.locationInWindow,
+                   modifierFlags: ereignis.modifierFlags.subtracting(.option).union(.command),
+                   timestamp: ereignis.timestamp, windowNumber: ereignis.windowNumber, context: nil,
+                   eventNumber: ereignis.eventNumber, clickCount: ereignis.clickCount, pressure: ereignis.pressure) {
+                return umgebaut
+            }
+
+            if ereignis.type == .leftMouseDown, fenster.firstResponder is NSText, !istEingabe(ziel) {
                 fenster.makeFirstResponder(nil)
             }
             return ereignis
@@ -85,6 +96,15 @@ enum Fokus {
     enum Pfeil {
         case hoch, runter, links, rechts
         static let gedrueckt = Notification.Name("AbosPfeiltaste")
+    }
+
+    private static func istInListe(_ ansicht: NSView?) -> Bool {
+        var v = ansicht
+        while let x = v {
+            if x is NSTableView || x is NSOutlineView { return true }
+            v = x.superview
+        }
+        return false
     }
 
     private static func istEingabe(_ ansicht: NSView?) -> Bool {

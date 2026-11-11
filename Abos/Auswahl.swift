@@ -12,7 +12,7 @@ struct AuswahlLeiste: View {
     var body: some View {
         HStack(alignment: .center, spacing: 20) {
             VStack(alignment: .leading, spacing: 2) {
-                Text("\(abos.count) Abos ausgewählt").fontWeight(.medium)
+                Text(abos.count == 1 ? "1 Abo ausgewählt" : "\(abos.count) Abos ausgewählt").fontWeight(.medium)
                 Text(abos.map { $0.name.isEmpty ? "Ohne Namen" : $0.name }.joined(separator: ", "))
                     .font(.caption)
                     .foregroundStyle(.secondary)

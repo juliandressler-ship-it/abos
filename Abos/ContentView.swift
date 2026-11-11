@@ -108,13 +108,14 @@ struct ContentView: View {
                 .frame(minWidth: 620, maxWidth: .infinity, maxHeight: .infinity)
                 // Mehrere markiert: Summe der Auswahl unten einblenden
                 .overlay(alignment: .bottom) {
-                    if markiert.count > 1 {
+                    // Ab zwei Abos – oder schon bei einem, wenn es in der Übersicht markiert (nicht geöffnet) ist
+                    if markiert.count > 1 || (markiert.count == 1 && auswahl == nil) {
                         AuswahlLeiste(abos: reihe.filter { markiert.contains($0) },
                                       aufheben: { markiert = []; anker = nil; bereichEnde = nil })
                             .transition(.move(edge: .bottom).combined(with: .opacity))
                     }
                 }
-                .animation(.easeOut(duration: 0.15), value: markiert.count > 1)
+                .animation(.easeOut(duration: 0.15), value: markiert.count > 1 || (markiert.count == 1 && auswahl == nil))
                 .onChange(of: auswahl) { _, neu in
                     if let neu {
                         zuletztGezeigt = neu

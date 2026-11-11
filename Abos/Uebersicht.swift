@@ -854,7 +854,7 @@ struct UebersichtView: View {
             .help("Alle Details öffnen")
         }
         .modifier(ZeilenHover(hoehe: 40))
-        .background(markiert.count > 1 && markiert.contains(abo) ? Color.accentColor.opacity(0.14) : .clear,
+        .background(markiert.contains(abo) ? Color.accentColor.opacity(0.14) : .clear,
                     in: RoundedRectangle(cornerRadius: 8))
         // Ein Klick irgendwo in die Zeile öffnet das Abo; Felder und Menüs darin reagieren weiter selbst
         .contentShape(Rectangle())
