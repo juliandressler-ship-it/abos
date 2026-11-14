@@ -414,12 +414,13 @@ struct UebersichtView: View {
 
     /// Statt Diagramm und Tabelle: alle Abos als Kacheln
     private var kachelAnsicht: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            VStack(alignment: .leading, spacing: 20) {
-                ansichtsleiste
+        VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: 16) {
+                kachelLeiste
                 kachelKopf
             }
-            .padding([.horizontal, .top], 24)
+            .padding(.horizontal, 24)
+            .padding(.top, 16)
             if tabelle.isEmpty {
                 Text(tabellenSuche.isEmpty ? String(localized: "Keine Abos in dieser Auswahl") : String(localized: "Nichts gefunden für „\(tabellenSuche)“"))
                     .foregroundStyle(.secondary)
@@ -440,16 +441,21 @@ struct UebersichtView: View {
     /// Passt alles in eine Zeile? Sonst stehen die Knöpfe unter dem Titel
     private var kachelKopf: some View {
         ViewThatFits(in: .horizontal) {
-            HStack(alignment: .lastTextBaseline, spacing: 12) {
+            HStack(alignment: .center, spacing: 12) {
                 kachelTitel
                 Spacer(minLength: 12)
-                kachelSteuerung
+                kachelSteuerung(kompakt: false)
+            }
+            HStack(alignment: .center, spacing: 12) {
+                kachelTitel
+                Spacer(minLength: 12)
+                kachelSteuerung(kompakt: true)
             }
             VStack(alignment: .leading, spacing: 12) {
                 kachelTitel
                 HStack(spacing: 12) {
                     Spacer(minLength: 0)
-                    kachelSteuerung
+                    kachelSteuerung(kompakt: true)
                 }
             }
         }
@@ -472,11 +478,73 @@ struct UebersichtView: View {
         .fixedSize()
     }
 
-    private var kachelSteuerung: some View {
-        HStack(spacing: 12) {
+    /// Status, Kosten und Ansicht in einer Zeile – passt sie nicht, wie in der Diagramm-Ansicht zweizeilig
+    private var kachelLeiste: some View {
+        VStack(alignment: .trailing, spacing: 8) {
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 12) {
+                    statusWahl
+                    Spacer(minLength: 12)
+                    KostenUmschalter(ansicht: ansichtBindung)
+                    layoutWahl
+                }
+                VStack(alignment: .trailing, spacing: 8) {
+                    HStack(spacing: 12) {
+                        statusWahl
+                        Spacer(minLength: 12)
+                        layoutWahl
+                    }
+                    KostenUmschalter(ansicht: ansichtBindung)
+                }
+            }
+            if ansicht == .zeitraum {
+                HStack(spacing: 12) {
+                    if vorgabe == .eigener {
+                        DatePicker("Von", selection: von, displayedComponents: .date).fixedSize()
+                        DatePicker("bis", selection: bis, displayedComponents: .date).fixedSize()
+                    }
+                    Picker("Zeitraum", selection: $vorgabe) {
+                        ForEach(ZeitraumVorgabe.allCases) { v in
+                            if v == .eigener { Divider() }
+                            Text(v.titel).tag(v)
+                        }
+                    }
+                    .labelsHidden()
+                    .fixedSize()
+                }
+            }
+        }
+    }
+
+    private var statusWahl: some View {
+        Picker("Anzeigen", selection: $status) {
+            ForEach(UebersichtStatus.allCases) { Text($0.titel).tag($0) }
+        }
+        .pickerStyle(.segmented)
+        .labelsHidden()
+        .fixedSize()
+        .help("Welche Abos ausgewertet werden")
+    }
+
+    private var layoutWahl: some View {
+        Picker("Ansicht", selection: $layout) {
+            Image(systemName: "chart.pie").accessibilityLabel("Diagramm und Tabelle").tag(UebersichtLayout.diagramme)
+            Image(systemName: "square.grid.2x2").accessibilityLabel("Kacheln").tag(UebersichtLayout.kacheln)
+        }
+        .pickerStyle(.segmented)
+        .labelsHidden()
+        .fixedSize()
+        .help("Ansicht: Diagramm und Tabelle oder Kacheln")
+    }
+
+    /// Kompakt: Knöpfe nur als Symbol, damit Titel und Steuerung in eine Zeile passen
+    private func kachelSteuerung(kompakt: Bool) -> some View {
+        HStack(spacing: kompakt ? 8 : 12) {
             Picker("Sortieren nach", selection: $sortFeld) {
                 ForEach(SortFeld.allCases) { Text($0.titel).tag($0) }
             }
+            .labelsHidden(kompakt)
+            .help("Sortieren nach")
             .onChange(of: sortFeld) { _, _ in sortUmgekehrt = false }
             Button { sortUmgekehrt.toggle() } label: {
                 Image(systemName: "arrow.up.arrow.down")
@@ -484,14 +552,17 @@ struct UebersichtView: View {
             .buttonStyle(.borderless)
             .help(String(localized: "Reihenfolge umdrehen") + " – " + Sortierung(feld: sortFeld, umgekehrt: sortUmgekehrt).richtung)
             SuchFeld(text: $tabellenSuche, platzhalter: kategorie.map { String(localized: "In \($0) suchen") } ?? String(localized: "In Tabelle suchen"))
-                .frame(width: 180)
-            Button { Sicherung.csvExportieren(tabelle) } label: {
-                Label("Exportieren", systemImage: "square.and.arrow.up")
+                .frame(width: kompakt ? 160 : 180)
+            Group {
+                Button { Sicherung.csvExportieren(tabelle) } label: {
+                    Label("Exportieren", systemImage: "square.and.arrow.up")
+                }
+                .help("Diese Abos als CSV-Datei exportieren – für Excel oder Numbers")
+                Button(action: neu) { Label("Neues Abo", systemImage: "plus") }
+                    .help("Neues Abo anlegen (⌘N)")
             }
             .buttonStyle(.borderless)
-            .help("Diese Abos als CSV-Datei exportieren – für Excel oder Numbers")
-            Button(action: neu) { Label("Neues Abo", systemImage: "plus") }
-                .buttonStyle(.borderless)
+            .labelStyle(EinfachesLabel(nurSymbol: kompakt))
         }
         .fixedSize()
     }

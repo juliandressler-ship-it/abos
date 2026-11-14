@@ -54,6 +54,11 @@ struct ContentView: View {
     @AppStorage("sortUmgekehrt") private var sortUmgekehrt = false
     // EXPERIMENT Kacheln (Anfang)
     @AppStorage("seitenleisteSichtbar") private var seitenleisteSichtbar = true
+    /// Breite der Seitenleiste; nur in dem Bereich verstellbar, in dem alles sauber passt
+    @AppStorage("seitenleisteBreite") private var seitenleisteBreite: Double = 300
+    private func seitenleisteUmschalten() {
+        withAnimation(.easeOut(duration: 0.2)) { seitenleisteSichtbar.toggle() }
+    }
     @AppStorage("uebersichtLayout") private var layout: UebersichtLayout = .diagramme
     @State private var zuLoeschenMehrere: [Abo] = []
     /// Kachel-Übersicht sichtbar: dann steuern Pfeile, Return und ⌫ das Raster
@@ -94,10 +99,17 @@ struct ContentView: View {
             DashboardView(abos: abos, auswahl: $auswahl, kategorie: $kategorieFilter, dringlichkeit: dringlichkeit,
                           markiert: markiertListe, aufheben: auswahlAufheben)   // EXPERIMENT Kacheln: markiert, aufheben
             Divider()
-            HSplitView {
-                if seitenleisteSichtbar {   // EXPERIMENT Kacheln: Seitenleiste ausblendbar
-                seitenleiste
-                    .frame(minWidth: 260, idealWidth: 300, maxWidth: 340)
+            // EXPERIMENT Kacheln: vorher HSplitView mit `seitenleiste.frame(minWidth: 260, idealWidth: 300, maxWidth: 340)`.
+            // Eigene Leiste mit Trenner, damit sie nie zu schmal wird und sich einklappen lässt.
+            HStack(spacing: 0) {
+                if seitenleisteSichtbar {
+                    seitenleiste
+                        .frame(width: SeitenleistenTrenner.begrenzt(seitenleisteBreite))
+                        .transition(.move(edge: .leading).combined(with: .opacity))
+                    SeitenleistenTrenner(breite: $seitenleisteBreite)
+                } else {
+                    EinklappStreifen(aufklappen: seitenleisteUmschalten)
+                        .transition(.opacity)
                 }
                 // Übersicht und Abo-Karte bleiben beide aufgebaut; ein Klick blendet nur um.
                 // Beim Wechsel zwischen Abos tauscht die Karte nur ihre Werte – nichts wird neu aufgebaut.
@@ -158,13 +170,6 @@ struct ContentView: View {
         }
         .navigationTitle(fensterTitel)
         .toolbar {
-            // EXPERIMENT Kacheln: Seitenleiste ein- und ausblenden
-            ToolbarItem(placement: .navigation) {
-                Button { withAnimation(.easeOut(duration: 0.2)) { seitenleisteSichtbar.toggle() } } label: {
-                    Label("Seitenleiste", systemImage: "sidebar.left")
-                }
-                .help(seitenleisteSichtbar ? "Seitenleiste ausblenden (⌃⌘S)" : "Seitenleiste einblenden (⌃⌘S)")
-            }
             ToolbarItemGroup {
                 Button(action: neu) { Label("Neues Abo", systemImage: "plus") }
                     .help("Neues Abo anlegen (⌘N)")
@@ -250,11 +255,16 @@ struct ContentView: View {
 
     private var seitenleiste: some View {
         VStack(spacing: 8) {
+            HStack(spacing: 4) {   // EXPERIMENT Kacheln: Einklapp-Pfeil neben der Suche
             SuchFeld(text: $suche, fokus: $sucheAktiv)
+                EinklappKnopf(richtung: .zu, aktion: seitenleisteUmschalten)
+            }
             .padding(.horizontal, 12)
             .padding(.top, 12)
 
-            SortierLeiste(feld: $sortFeld, umgekehrt: $sortUmgekehrt)
+            // EXPERIMENT Kacheln: bei schmaler Seitenleiste zeigt der Richtungsknopf nur das Symbol
+            SortierLeiste(feld: $sortFeld, umgekehrt: $sortUmgekehrt,
+                          kompakt: SeitenleistenTrenner.begrenzt(seitenleisteBreite) < 330)
                 .padding(.horizontal, 12)
 
             liste

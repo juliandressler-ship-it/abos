@@ -91,6 +91,8 @@ struct Sortierung {
 struct SortierLeiste: View {
     @Binding var feld: SortFeld
     @Binding var umgekehrt: Bool
+    /// EXPERIMENT Kacheln: bei schmaler Seitenleiste nur das Pfeilsymbol
+    var kompakt = false
 
     var body: some View {
         HStack(spacing: 8) {
@@ -106,12 +108,15 @@ struct SortierLeiste: View {
             } label: {
                 HStack(spacing: 4) {
                     Image(systemName: "arrow.up.arrow.down")
+                    if !kompakt {   // EXPERIMENT Kacheln
                     Text(Sortierung(feld: feld, umgekehrt: umgekehrt).richtung)
                         .lineLimit(1)
+                    }
                 }
-                .frame(minWidth: 84)
+                .frame(minWidth: kompakt ? 0 : 84)   // EXPERIMENT Kacheln: vorher minWidth: 84
             }
-            .help("Reihenfolge umdrehen")
+            .help(kompakt ? String(localized: "Reihenfolge umdrehen") + " – " + Sortierung(feld: feld, umgekehrt: umgekehrt).richtung
+                          : String(localized: "Reihenfolge umdrehen"))   // EXPERIMENT Kacheln: vorher .help("Reihenfolge umdrehen")
         }
     }
 }

@@ -4578,6 +4578,7 @@
       }
     },
     "Seitenleiste": {
+      "extractionState": "stale",
       "localizations": {
         "de": {
           "stringUnit": {

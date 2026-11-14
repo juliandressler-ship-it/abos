@@ -10,6 +10,26 @@ enum UebersichtLayout: String, CaseIterable, Identifiable {
     var id: String { rawValue }
 }
 
+/// Label mit oder ohne Titel – für Knöpfe, die bei wenig Platz nur ihr Symbol zeigen
+struct EinfachesLabel: LabelStyle {
+    let nurSymbol: Bool
+    func makeBody(configuration: Configuration) -> some View {
+        if nurSymbol {
+            configuration.icon
+        } else {
+            HStack(spacing: 4) { configuration.icon; configuration.title }
+        }
+    }
+}
+
+extension View {
+    /// Beschriftung eines Pickers nur bei Bedarf ausblenden
+    @ViewBuilder
+    func labelsHidden(_ ausblenden: Bool) -> some View {
+        if ausblenden { labelsHidden() } else { self }
+    }
+}
+
 // MARK: - Raster
 
 /// Alle Abos der Übersicht als Kacheln – Bedienung wie im Finder:
@@ -221,3 +241,85 @@ struct AboKachel: View {
 // Rückgängig machen:
 //   cd ~/Desktop/Abo/Abos && git switch main && ./"App aktualisieren.command"
 // Alle Stellen des Experiments findet man mit:  grep -rn "EXPERIMENT Kacheln" Abos
+
+// MARK: - Seitenleiste einklappen (EXPERIMENT Kacheln)
+
+/// Kleiner Pfeil: ‹ klappt die Seitenleiste ein, › klappt sie wieder auf
+struct EinklappKnopf: View {
+    enum Richtung { case zu, auf }
+    let richtung: Richtung
+    var aktion: () -> Void
+    @State private var hover = false
+
+    var body: some View {
+        Button(action: aktion) {
+            Image(systemName: richtung == .zu ? "chevron.left" : "chevron.right")
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(hover ? .primary : .secondary)
+                .frame(width: 24, height: 28)
+                .background(Color.primary.opacity(hover ? 0.08 : 0), in: RoundedRectangle(cornerRadius: 6))
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .onHover { hover = $0 }
+        .help(richtung == .zu ? "Seitenleiste ausblenden (⌃⌘S)" : "Seitenleiste einblenden (⌃⌘S)")
+        .accessibilityLabel(richtung == .zu ? "Seitenleiste ausblenden" : "Seitenleiste einblenden")
+    }
+}
+
+/// Bleibt links stehen, wenn die Seitenleiste eingeklappt ist
+struct EinklappStreifen: View {
+    var aufklappen: () -> Void
+
+    var body: some View {
+        HStack(spacing: 0) {
+            VStack {
+                EinklappKnopf(richtung: .auf, aktion: aufklappen)
+                    .padding(.top, 12)
+                Spacer()
+            }
+            .frame(width: 32)
+            Divider()
+        }
+    }
+}
+
+/// Trenner zum Ziehen; die Breite bleibt zwischen `minimum` und `maximum`
+struct SeitenleistenTrenner: View {
+    @Binding var breite: Double
+    @State private var start: Double?
+    @State private var hover = false
+
+    static let minimum: Double = 290
+    static let maximum: Double = 380
+    static func begrenzt(_ b: Double) -> CGFloat { CGFloat(min(max(b, minimum), maximum)) }
+
+    var body: some View {
+        Rectangle()
+            .fill(Color(nsColor: .separatorColor))
+            .frame(width: 1)
+            .frame(width: 7)
+            .contentShape(Rectangle())
+            .padding(.horizontal, -3)
+            .zIndex(1)
+            .onHover { drin in
+                if drin, !hover { NSCursor.resizeLeftRight.push() }
+                if !drin, hover, start == nil { NSCursor.pop() }
+                hover = drin
+            }
+            .gesture(
+                DragGesture(minimumDistance: 1, coordinateSpace: .global)
+                    .onChanged { g in
+                        let s = start ?? breite
+                        start = s
+                        breite = Double(Self.begrenzt(s + g.translation.width))
+                    }
+                    .onEnded { _ in
+                        start = nil
+                        if !hover { NSCursor.pop() }
+                    }
+            )
+            // Doppelklick: zurück auf die Standardbreite
+            .onTapGesture(count: 2) { withAnimation(.easeOut(duration: 0.2)) { breite = 300 } }
+    }
+}
