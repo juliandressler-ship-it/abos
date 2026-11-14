@@ -26,8 +26,8 @@ struct KostenUmschalter: View {
                 .fixedSize()
                 .help("Durchschnitt \(einheit.text) – der Pfeil wechselt zu Woche, Tag oder Stunde")
             }
-            knopf(kompakt ? "Jahr" : "Pro Jahr", .jahr)
-            if !kompakt { knopf("Zeitraum", .zeitraum) }
+            knopf(kompakt ? String(localized: "Jahr") : String(localized: "Pro Jahr"), .jahr)
+            if !kompakt { knopf(String(localized: "Zeitraum"), .zeitraum) }
         }
         .padding(2)
         .background(Color.primary.opacity(0.07), in: RoundedRectangle(cornerRadius: 7))

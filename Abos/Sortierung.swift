@@ -8,11 +8,11 @@ enum SortFeld: String, CaseIterable, Identifiable {
     var id: String { rawValue }
     var titel: String {
         switch self {
-        case .name: return "Name"
-        case .kategorie: return "Kategorie"
-        case .preis: return "Preis"
-        case .jahr: return "Preis pro Jahr"
-        case .frist: return "Frist"
+        case .name: return String(localized: "Name")
+        case .kategorie: return String(localized: "Kategorie")
+        case .preis: return String(localized: "Preis")
+        case .jahr: return String(localized: "Preis pro Jahr")
+        case .frist: return String(localized: "Frist")
         }
     }
 
@@ -31,18 +31,18 @@ struct Sortierung {
     var richtung: String {
         switch feld {
         case .name, .kategorie: return umgekehrt ? "Z–A" : "A–Z"
-        case .preis, .jahr: return umgekehrt ? "Niedrigster" : "Höchster"
-        case .frist: return umgekehrt ? "Späteste" : "Nächste"
+        case .preis, .jahr: return umgekehrt ? String(localized: "Niedrigster") : String(localized: "Höchster")
+        case .frist: return umgekehrt ? String(localized: "Späteste") : String(localized: "Nächste")
         }
     }
 
     /// z. B. „Preis, höchster zuerst“
     var beschreibung: String {
         switch feld {
-        case .name: return "Name \(richtung)"
-        case .kategorie: return "Kategorie \(richtung)"
-        case .preis, .jahr: return "Preis, \(richtung.lowercased()) zuerst"
-        case .frist: return "Frist, \(richtung.lowercased()) zuerst"
+        case .name: return String(localized: "Name \(richtung)")
+        case .kategorie: return String(localized: "Kategorie \(richtung)")
+        case .preis, .jahr: return String(localized: "Preis, \(richtung.lowercased()) zuerst")
+        case .frist: return String(localized: "Frist, \(richtung.lowercased()) zuerst")
         }
     }
 

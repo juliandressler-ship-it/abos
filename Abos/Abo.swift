@@ -8,10 +8,10 @@ enum Intervall: String, CaseIterable, Identifiable {
     var id: String { rawValue }
     var titel: String {
         switch self {
-        case .monatlich: return "Monatlich"
-        case .quartal: return "Quartal"
-        case .jaehrlich: return "Jährlich"
-        case .eigen: return "Eigen"
+        case .monatlich: return String(localized: "Monatlich")
+        case .quartal: return String(localized: "Quartal")
+        case .jaehrlich: return String(localized: "Jährlich")
+        case .eigen: return String(localized: "Eigen")
         }
     }
 }
@@ -21,9 +21,9 @@ enum FristEinheit: String, CaseIterable, Identifiable {
     var id: String { rawValue }
     var titel: String {
         switch self {
-        case .tage: return "Tage"
-        case .wochen: return "Wochen"
-        case .monate: return "Monate"
+        case .tage: return String(localized: "Tage")
+        case .wochen: return String(localized: "Wochen")
+        case .monate: return String(localized: "Monate")
         }
     }
 }
@@ -31,7 +31,7 @@ enum FristEinheit: String, CaseIterable, Identifiable {
 enum AboStatus: String, CaseIterable, Identifiable {
     case aktiv, gekuendigt
     var id: String { rawValue }
-    var titel: String { self == .aktiv ? "Aktiv" : "Gekündigt" }
+    var titel: String { self == .aktiv ? String(localized: "Aktiv") : String(localized: "Gekündigt") }
 }
 
 // MARK: - Datenmodell
@@ -374,10 +374,10 @@ struct VerlaufEintrag: Codable, Identifiable, Hashable {
 
         var titel: String {
             switch self {
-            case .angelegt: return "Angelegt"
-            case .gekuendigt: return "Gekündigt"
-            case .reaktiviert: return "Wieder aktiviert"
-            case .preis: return "Preis geändert"
+            case .angelegt: return String(localized: "Angelegt")
+            case .gekuendigt: return String(localized: "Gekündigt")
+            case .reaktiviert: return String(localized: "Wieder aktiviert")
+            case .preis: return String(localized: "Preis geändert")
             }
         }
 
@@ -396,9 +396,9 @@ struct VerlaufEintrag: Codable, Identifiable, Hashable {
 
         var titel: String {
             switch self {
-            case .app: return "in der App"
-            case .mitteilung: return "über die Mitteilung"
-            case .claude: return "durch Claude"
+            case .app: return String(localized: "in der App")
+            case .mitteilung: return String(localized: "über die Mitteilung")
+            case .claude: return String(localized: "durch Claude")
             }
         }
     }
@@ -443,10 +443,11 @@ enum Kalender {
 }
 
 enum Format {
-    static let locale = Locale(identifier: "de_DE")
+    /// Zahlen- und Datumsformat passend zur Sprache der App
+    static let locale: Locale = AppSprache.aktiv == "en" ? Locale(identifier: "en_US") : Locale(identifier: "de_DE")
 
     static func euro(_ wert: Double?) -> String {
-        guard let wert else { return "offen" }
+        guard let wert else { return String(localized: "offen") }
         // Kleine Beträge (z. B. pro Stunde) nicht als 0,00 € zeigen
         if wert != 0 && abs(wert) < 0.1 {
             return wert.formatted(.currency(code: "EUR").precision(.fractionLength(2...4)).locale(locale))
@@ -486,10 +487,10 @@ enum Format {
 
     static func inTagen(_ tage: Int) -> String {
         switch tage {
-        case ..<0: return "verstrichen"
-        case 0: return "heute"
-        case 1: return "morgen"
-        default: return "in \(tage) Tagen"
+        case ..<0: return String(localized: "verstrichen")
+        case 0: return String(localized: "heute")
+        case 1: return String(localized: "morgen")
+        default: return String(localized: "in \(tage) Tagen")
         }
     }
 

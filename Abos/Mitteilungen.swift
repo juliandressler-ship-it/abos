@@ -10,8 +10,8 @@ enum StandardErinnerung {
     static let zweiteSchluessel = "standardErinnerung2"
 
     static let optionen: [(tage: Int, titel: String)] = [
-        (-1, "Aus"), (0, "Am Tag der Frist"), (1, "1 Tag vorher"), (3, "3 Tage vorher"),
-        (7, "1 Woche vorher"), (14, "2 Wochen vorher"), (30, "1 Monat vorher"),
+        (-1, String(localized: "Aus")), (0, String(localized: "Am Tag der Frist")), (1, String(localized: "1 Tag vorher")), (3, String(localized: "3 Tage vorher")),
+        (7, String(localized: "1 Woche vorher")), (14, String(localized: "2 Wochen vorher")), (30, String(localized: "1 Monat vorher")),
     ]
 
     static func registrieren() {
@@ -26,14 +26,14 @@ enum StandardErinnerung {
     }
 
     static func text(_ tage: Int) -> String {
-        optionen.first { $0.tage == tage }?.titel ?? "\(tage) Tage vorher"
+        optionen.first { $0.tage == tage }?.titel ?? String(localized: "\(tage) Tage vorher")
     }
 
     /// z. B. „am Tag der Frist“ oder „1 Woche vorher und am Tag der Frist“
     static var beschreibung: String {
         let v = vorlaeufe
-        guard !v.isEmpty else { return "aus" }
-        return v.map { $0 == 0 ? "am Tag der Frist" : text($0) }.joined(separator: " und ")
+        guard !v.isEmpty else { return String(localized: "aus") }
+        return v.map { $0 == 0 ? String(localized: "am Tag der Frist") : text($0) }.joined(separator: " und ")
     }
 }
 
@@ -49,9 +49,9 @@ enum Mitteilungen {
 
     static func kategorienRegistrieren() {
         let aktionen = [
-            UNNotificationAction(identifier: Aktion.erledigt, title: "Erledigt", options: []),
-            UNNotificationAction(identifier: Aktion.gekuendigt, title: "Gekündigt", options: []),
-            UNNotificationAction(identifier: Aktion.spaeter, title: "In 1 Woche erneut", options: []),
+            UNNotificationAction(identifier: Aktion.erledigt, title: String(localized: "Erledigt"), options: []),
+            UNNotificationAction(identifier: Aktion.gekuendigt, title: String(localized: "Gekündigt"), options: []),
+            UNNotificationAction(identifier: Aktion.spaeter, title: String(localized: "In 1 Woche erneut"), options: []),
         ]
         let kategorie = UNNotificationCategory(identifier: kategorieID, actions: aktionen,
                                                intentIdentifiers: [], options: [])
@@ -89,10 +89,10 @@ enum Mitteilungen {
     static func berechtigungText() async -> String {
         let s = await UNUserNotificationCenter.current().notificationSettings()
         switch s.authorizationStatus {
-        case .authorized, .provisional: return "erlaubt"
-        case .denied: return "abgelehnt – bitte in den Systemeinstellungen erlauben"
-        case .notDetermined: return "noch nicht gefragt"
-        default: return "unbekannt"
+        case .authorized, .provisional: return String(localized: "erlaubt")
+        case .denied: return String(localized: "abgelehnt – bitte in den Systemeinstellungen erlauben")
+        case .notDetermined: return String(localized: "noch nicht gefragt")
+        default: return String(localized: "unbekannt")
         }
     }
 
@@ -113,18 +113,18 @@ enum Mitteilungen {
             // "In 1 Woche erneut"
             if let erneut = abo.erneutErinnernAm, erneut > jetzt {
                 hinzufuegen(id: "\(abo.uuid)-erneut", abo: abo, datum: erneut,
-                            titel: "Erinnerung: \(abo.name) kündigen?",
-                            text: "Spätestens kündigen bis \(fristText).")
+                            titel: String(localized: "Erinnerung: \(abo.name) kündigen?"),
+                            text: String(localized: "Spätestens kündigen bis \(fristText)."))
             }
 
             if let erledigt = abo.erledigtFuerFrist, cal.isDate(erledigt, inSameDayAs: frist) { continue }
 
             for termin in abo.erinnerungsTermine(jetzt: jetzt) {
-                let rest = termin.vorlauf == 0 ? "heute ist der letzte Tag"
-                    : termin.vorlauf == 1 ? "noch 1 Tag" : "noch \(termin.vorlauf) Tage"
+                let rest = termin.vorlauf == 0 ? String(localized: "heute ist der letzte Tag")
+                    : termin.vorlauf == 1 ? String(localized: "noch 1 Tag") : String(localized: "noch \(termin.vorlauf) Tage")
                 hinzufuegen(id: "\(abo.uuid)-\(termin.vorlauf)", abo: abo, datum: termin.datum,
-                            titel: "Kündigungsfrist: \(abo.name)",
-                            text: "Spätestens kündigen bis \(fristText) – \(rest).")
+                            titel: String(localized: "Kündigungsfrist: \(abo.name)"),
+                            text: String(localized: "Spätestens kündigen bis \(fristText) – \(rest)."))
             }
         }
     }
@@ -143,8 +143,8 @@ enum Mitteilungen {
 
     static func testSenden() {
         let inhalt = UNMutableNotificationContent()
-        inhalt.title = "Abos – Testmitteilung"
-        inhalt.body = "So sehen Erinnerungen an Kündigungsfristen aus."
+        inhalt.title = String(localized: "Abos – Testmitteilung")
+        inhalt.body = String(localized: "So sehen Erinnerungen an Kündigungsfristen aus.")
         inhalt.sound = .default
         inhalt.categoryIdentifier = kategorieID
         let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 3, repeats: false)

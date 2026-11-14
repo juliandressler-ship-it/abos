@@ -59,7 +59,7 @@ struct AboDetailView: View {
             .buttonStyle(.plain)
             .foregroundStyle(Color.accentColor)
             .help("Zurück zu \(zurueckTitel) (⌘[ oder Esc)")
-            Text(abo.name.isEmpty ? "Neues Abo" : abo.name)
+            Text(abo.name.isEmpty ? String(localized: "Neues Abo") : abo.name)
                 .fontWeight(.medium)
                 .lineLimit(1)
                 .foregroundStyle(.secondary)
@@ -84,7 +84,7 @@ struct AboDetailView: View {
                 HStack(spacing: 8) {
                     KategorieMenue(abo: abo, alle: alle)
                     if !abo.istAktiv {
-                        Text(abo.gekuendigtAm.map { "Gekündigt am \(Format.datum($0))" } ?? "Gekündigt")
+                        Text(abo.gekuendigtAm.map { String(localized: "Gekündigt am \(Format.datum($0))") } ?? String(localized: "Gekündigt"))
                             .font(.caption.weight(.medium))
                             .foregroundStyle(.secondary)
                             .padding(.horizontal, 6)
@@ -134,25 +134,25 @@ struct AboDetailView: View {
     /// Vorformulierte Kündigung; verschickt wird sie erst im Mailprogramm
     private var kuendigungsMail: URL? {
         let nummer = abo.vertragsnummer.trimmingCharacters(in: .whitespaces)
-        let betreff = "Kündigung \(abo.name)" + (nummer.isEmpty ? "" : " – Vertragsnr. \(nummer)")
-        let text = """
+        let betreff = String(localized: "Kündigung \(abo.name)") + (nummer.isEmpty ? "" : String(localized: " – Vertragsnr. \(nummer)"))
+        let vertrag = abo.name + (nummer.isEmpty ? "" : String(localized: " (Vertragsnummer \(nummer))"))
+        let text = String(localized: """
         Sehr geehrte Damen und Herren,
 
-        hiermit kündige ich meinen Vertrag „\(abo.name)“\(nummer.isEmpty ? "" : " (Vertragsnummer \(nummer))") \
-        fristgerecht zum nächstmöglichen Zeitpunkt.
+        hiermit kündige ich meinen Vertrag „\(vertrag)“ fristgerecht zum nächstmöglichen Zeitpunkt.
 
         Bitte bestätigen Sie mir die Kündigung und das Vertragsende schriftlich.
 
         Mit freundlichen Grüßen
-        """
+        """)
         return Format.mail(abo.kontaktEmail, betreff: betreff, text: text)
     }
 
     private var kennzahlen: some View {
         HStack(alignment: .top, spacing: 0) {
-            kennzahl(abo.istAktiv ? "Pro Monat" : "Gespart pro Monat", Format.euro(abo.proMonat))
+            kennzahl(abo.istAktiv ? String(localized: "Pro Monat") : String(localized: "Gespart pro Monat"), Format.euro(abo.proMonat))
             trenner
-            kennzahl(abo.istAktiv ? "Pro Jahr" : "Gespart pro Jahr", Format.euro(abo.proJahr))
+            kennzahl(abo.istAktiv ? String(localized: "Pro Jahr") : String(localized: "Gespart pro Jahr"), Format.euro(abo.proJahr))
             trenner
             fristKennzahl
         }
@@ -190,10 +190,10 @@ struct AboDetailView: View {
     private var fristText: some View {
         let letzteKuendigung = abo.verlauf.first { $0.art == .gekuendigt }
         VStack(alignment: .leading, spacing: 4) {
-            Text(abo.istAktiv ? "Spätestens kündigen bis" : "Gekündigt am").font(.caption).foregroundStyle(.secondary)
+            Text(abo.istAktiv ? String(localized: "Spätestens kündigen bis") : String(localized: "Gekündigt am")).font(.caption).foregroundStyle(.secondary)
             if !abo.istAktiv {
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
-                    Text(abo.gekuendigtAm.map(Format.datum) ?? "Datum unbekannt")
+                    Text(abo.gekuendigtAm.map(Format.datum) ?? String(localized: "Datum unbekannt"))
                         .font(.system(size: 18, weight: .medium))
                         .monospacedDigit()
                         .foregroundStyle(abo.gekuendigtAm == nil ? .secondary : .primary)
@@ -230,7 +230,7 @@ struct AboDetailView: View {
             VStack(spacing: 2) {
                 Image(systemName: "clock.arrow.circlepath")
                     .font(.system(size: 15, weight: .medium))
-                Text(anzahl > 0 ? "Verlauf (\(anzahl))" : "Verlauf")
+                Text(anzahl > 0 ? String(localized: "Verlauf (\(anzahl))") : String(localized: "Verlauf"))
                     .font(.caption)
                     .monospacedDigit()
             }
@@ -268,7 +268,7 @@ struct AboDetailView: View {
                     }
                 }
 
-                Abschnitt("Kosten") {
+                Abschnitt(String(localized: "Kosten")) {
                     LabeledContent("Betrag") {
                         HStack(spacing: 4) {
                             TextField("Betrag", value: betragBindung,
@@ -290,7 +290,7 @@ struct AboDetailView: View {
                     }
                     if abo.intervall == .eigen {
                         LabeledContent("Alle") {
-                            zahlFeld($abo.eigeneMonate, bereich: 1...120, einheit: "Monate")
+                            zahlFeld($abo.eigeneMonate, bereich: 1...120, einheit: String(localized: "Monate"))
                         }
                     }
                     LabeledContent("Mein Anteil") {
@@ -315,7 +315,7 @@ struct AboDetailView: View {
                 erinnerungSektion
                 kontaktSektion
 
-                Abschnitt("Notizen") {
+                Abschnitt(String(localized: "Notizen")) {
                     TextEditor(text: $abo.notizen)
                         .font(.body)
                         .scrollContentBackground(.hidden)
@@ -342,7 +342,7 @@ struct AboDetailView: View {
 
     /// Zwei Wege wie im Kalender: eine Regel ab dem Verlängerungstag oder ein festes Datum
     private var kuendigungSektion: some View {
-        Abschnitt("Kündigung") {
+        Abschnitt(String(localized: "Kündigung")) {
             LabeledContent("Frist angeben als") {
                 Picker("Frist angeben als", selection: fristAlsDatum) {
                     Text("Ab Verlängerung").tag(false)
@@ -358,7 +358,7 @@ struct AboDetailView: View {
                     DatePicker("Kündigen bis", selection: festerTermin, in: Format.datumsBereich, displayedComponents: .date)
                         .labelsHidden()
                 }
-                verlaengerungPicker(titel: "Wiederholen")
+                verlaengerungPicker(titel: String(localized: "Wiederholen"))
             } else {
                 if abo.autoVerlaengerung {
                     LabeledContent("Nächste Verlängerung") {
@@ -374,7 +374,7 @@ struct AboDetailView: View {
                             .labelsHidden()
                     }
                 }
-                verlaengerungPicker(titel: "Verlängert sich")
+                verlaengerungPicker(titel: String(localized: "Verlängert sich"))
                 LabeledContent("Kündigungsfrist") {
                     Picker("Kündigungsfrist", selection: fristAuswahl) {
                         ForEach(Self.fristVorgaben, id: \.tag) { Text($0.titel).tag($0.tag) }
@@ -408,7 +408,7 @@ struct AboDetailView: View {
     private func verlaengerungPicker(titel: String) -> some View {
         LabeledContent(titel) {
             Picker(titel, selection: verlaengerungAuswahl) {
-                Text(abo.kuendigenBisFest != nil ? "Nie" : "Nicht automatisch").tag(0)
+                Text(abo.kuendigenBisFest != nil ? String(localized: "Nie") : String(localized: "Nicht automatisch")).tag(0)
                 Divider()
                 ForEach(Self.verlaengerungVorgaben, id: \.monate) { Text($0.titel).tag($0.monate) }
                 Divider()
@@ -418,8 +418,8 @@ struct AboDetailView: View {
             .fixedSize()
         }
         if verlaengerungAuswahl.wrappedValue == -1 {
-            LabeledContent(abo.kuendigenBisFest != nil ? "Alle" : "Um") {
-                zahlFeld($abo.verlaengerungsSchritt, bereich: 1...120, einheit: "Monate")
+            LabeledContent(abo.kuendigenBisFest != nil ? String(localized: "Alle") : String(localized: "Um")) {
+                zahlFeld($abo.verlaengerungsSchritt, bereich: 1...120, einheit: String(localized: "Monate"))
             }
         }
     }
@@ -433,13 +433,13 @@ struct AboDetailView: View {
                 Kalenderblatt(datum: frist, farbe: farbe)
                 VStack(alignment: .leading, spacing: 8) {
                     HStack(alignment: .top, spacing: 8) {
-                        zeitpunkt("Kündigen bis", frist, farbe: farbe, betont: true)
+                        zeitpunkt(String(localized: "Kündigen bis"), frist, farbe: farbe, betont: true)
                         if abo.kuendigenBisFest == nil, let r = abo.naechstesEnde() {
                             pfeil
-                            zeitpunkt("Letzter Tag", Abo.letzterTag(vor: r))
+                            zeitpunkt(String(localized: "Letzter Tag"), Abo.letzterTag(vor: r))
                             if abo.autoVerlaengerung {
                                 pfeil
-                                zeitpunkt("Verlängert sich", r)
+                                zeitpunkt(String(localized: "Verlängert sich"), r)
                             }
                         }
                     }
@@ -464,14 +464,14 @@ struct AboDetailView: View {
         let wiederholung = Self.verlaengerungText(schritt)
         if abo.kuendigenBisFest != nil {
             return abo.autoVerlaengerung
-                ? "Der Termin wiederholt sich \(Self.wiederholText(schritt)) und rückt danach automatisch weiter."
-                : "Einmaliger Termin."
+                ? String(localized: "Der Termin wiederholt sich \(Self.wiederholText(schritt)) und rückt danach automatisch weiter.")
+                : String(localized: "Einmaliger Termin.")
         }
         let vorher = Self.fristText(abo.fristWert, abo.fristEinheit)
-        let frist = vorher.map { "Frist \($0) vor dem letzten Tag." } ?? "Keine Frist: kündigen geht bis einschließlich zum letzten Tag."
+        let frist = vorher.map { String(localized: "Frist \($0) vor dem letzten Tag.") } ?? String(localized: "Keine Frist: kündigen geht bis einschließlich zum letzten Tag.")
         return frist + (abo.autoVerlaengerung
-            ? " Ohne Kündigung läuft das Abo \(wiederholung) weiter."
-            : " Danach endet das Abo von selbst.")
+            ? String(localized: " Ohne Kündigung läuft das Abo \(wiederholung) weiter.")
+            : String(localized: " Danach endet das Abo von selbst."))
     }
 
     private func zeitpunkt(_ titel: String, _ datum: Date, farbe: Color? = nil, betont: Bool = false) -> some View {
@@ -494,7 +494,7 @@ struct AboDetailView: View {
     // MARK: Erinnerung
 
     private var erinnerungSektion: some View {
-        Abschnitt("Erinnerung") {
+        Abschnitt(String(localized: "Erinnerung")) {
             LabeledContent("Erinnere mich") {
                 Toggle("Erinnere mich", isOn: erinnernAn)
                     .labelsHidden()
@@ -514,7 +514,7 @@ struct AboDetailView: View {
                 LabeledContent("Nächste Mitteilung") {
                     let termine = abo.erinnerungsTermine()
                     if termine.isEmpty {
-                        Text(abo.istAktiv ? "keine anstehend" : "Abo ist gekündigt").foregroundStyle(.secondary)
+                        Text(abo.istAktiv ? String(localized: "keine anstehend") : String(localized: "Abo ist gekündigt")).foregroundStyle(.secondary)
                     } else {
                         Text(termine.map { Format.datumUhrzeit($0.datum) }.joined(separator: "  ·  "))
                             .monospacedDigit()
@@ -569,21 +569,21 @@ struct AboDetailView: View {
     private var standardText: String {
         _ = (standard1, standard2)
         let b = StandardErinnerung.beschreibung
-        return b == "aus" ? "Standard (in den Einstellungen aus)" : "Standard: \(b)"
+        return StandardErinnerung.vorlaeufe.isEmpty ? String(localized: "Standard (in den Einstellungen aus)") : String(localized: "Standard: \(b)")
     }
 
     // MARK: Kontakt & Links
 
     private var kontaktSektion: some View {
-        Abschnitt("Kontakt & Links") {
-            feldZeile("Website", text: $abo.websiteLink, prompt: "https://…",
-                      symbol: "arrow.up.right.square", hilfe: "Im Browser öffnen", ziel: Format.url(abo.websiteLink))
-            feldZeile("Kündigungs-Link", text: $abo.kuendigungsLink, prompt: "https://…",
-                      symbol: "arrow.up.right.square", hilfe: "Im Browser öffnen", ziel: Format.url(abo.kuendigungsLink))
-            feldZeile("Kontakt-E-Mail", text: $abo.kontaktEmail, prompt: "service@…",
-                      symbol: "envelope", hilfe: "E-Mail schreiben", ziel: Format.mail(abo.kontaktEmail))
-            feldZeile("Telefon", text: $abo.telefon, prompt: "+49 …",
-                      symbol: "phone", hilfe: "Anrufen", ziel: Format.telefon(abo.telefon))
+        Abschnitt(String(localized: "Kontakt & Links")) {
+            feldZeile(String(localized: "Website"), text: $abo.websiteLink, prompt: String(localized: "https://…"),
+                      symbol: "arrow.up.right.square", hilfe: String(localized: "Im Browser öffnen"), ziel: Format.url(abo.websiteLink))
+            feldZeile(String(localized: "Kündigungs-Link"), text: $abo.kuendigungsLink, prompt: String(localized: "https://…"),
+                      symbol: "arrow.up.right.square", hilfe: String(localized: "Im Browser öffnen"), ziel: Format.url(abo.kuendigungsLink))
+            feldZeile(String(localized: "Kontakt-E-Mail"), text: $abo.kontaktEmail, prompt: String(localized: "service@…"),
+                      symbol: "envelope", hilfe: String(localized: "E-Mail schreiben"), ziel: Format.mail(abo.kontaktEmail))
+            feldZeile(String(localized: "Telefon"), text: $abo.telefon, prompt: "+49 …",
+                      symbol: "phone", hilfe: String(localized: "Anrufen"), ziel: Format.telefon(abo.telefon))
             LabeledContent("Kunden-/Vertragsnr.") {
                 HStack(spacing: 4) {
                     TextField("Vertragsnummer", text: $abo.vertragsnummer, prompt: Text("optional"))
@@ -732,45 +732,45 @@ struct AboDetailView: View {
     }
 
     private static let fristVorgaben: [FristVorgabe] = [
-        FristVorgabe(titel: "Keine – bis zum letzten Tag", wert: 0, einheit: .tage),
-        FristVorgabe(titel: "1 Woche", wert: 1, einheit: .wochen),
-        FristVorgabe(titel: "2 Wochen", wert: 2, einheit: .wochen),
-        FristVorgabe(titel: "4 Wochen", wert: 4, einheit: .wochen),
-        FristVorgabe(titel: "1 Monat", wert: 1, einheit: .monate),
-        FristVorgabe(titel: "2 Monate", wert: 2, einheit: .monate),
-        FristVorgabe(titel: "3 Monate", wert: 3, einheit: .monate),
-        FristVorgabe(titel: "6 Monate", wert: 6, einheit: .monate),
+        FristVorgabe(titel: String(localized: "Keine – bis zum letzten Tag"), wert: 0, einheit: .tage),
+        FristVorgabe(titel: String(localized: "1 Woche"), wert: 1, einheit: .wochen),
+        FristVorgabe(titel: String(localized: "2 Wochen"), wert: 2, einheit: .wochen),
+        FristVorgabe(titel: String(localized: "4 Wochen"), wert: 4, einheit: .wochen),
+        FristVorgabe(titel: String(localized: "1 Monat"), wert: 1, einheit: .monate),
+        FristVorgabe(titel: String(localized: "2 Monate"), wert: 2, einheit: .monate),
+        FristVorgabe(titel: String(localized: "3 Monate"), wert: 3, einheit: .monate),
+        FristVorgabe(titel: String(localized: "6 Monate"), wert: 6, einheit: .monate),
     ]
 
     private static let verlaengerungVorgaben: [(titel: String, monate: Int)] = [
-        ("Jeden Monat", 1), ("Jedes Quartal", 3), ("Jedes halbe Jahr", 6),
-        ("Jedes Jahr", 12), ("Alle 2 Jahre", 24),
+        (String(localized: "Jeden Monat"), 1), (String(localized: "Jedes Quartal"), 3), (String(localized: "Jedes halbe Jahr"), 6),
+        (String(localized: "Jedes Jahr"), 12), (String(localized: "Alle 2 Jahre"), 24),
     ]
 
     private static let erinnerungVorgaben: [(titel: String, tage: Int)] = [
-        ("Am Tag der Frist", 0), ("1 Tag vorher", 1), ("3 Tage vorher", 3),
-        ("1 Woche vorher", 7), ("2 Wochen vorher", 14), ("1 Monat vorher", 30),
+        (String(localized: "Am Tag der Frist"), 0), (String(localized: "1 Tag vorher"), 1), (String(localized: "3 Tage vorher"), 3),
+        (String(localized: "1 Woche vorher"), 7), (String(localized: "2 Wochen vorher"), 14), (String(localized: "1 Monat vorher"), 30),
     ]
 
     static func verlaengerungText(_ monate: Int) -> String {
         switch monate {
-        case 1: return "um einen Monat"
-        case 3: return "um ein Quartal"
-        case 6: return "um ein halbes Jahr"
-        case 12: return "um ein Jahr"
-        case 24: return "um zwei Jahre"
-        default: return "um \(monate) Monate"
+        case 1: return String(localized: "um einen Monat")
+        case 3: return String(localized: "um ein Quartal")
+        case 6: return String(localized: "um ein halbes Jahr")
+        case 12: return String(localized: "um ein Jahr")
+        case 24: return String(localized: "um zwei Jahre")
+        default: return String(localized: "um \(monate) Monate")
         }
     }
 
     static func wiederholText(_ monate: Int) -> String {
         switch monate {
-        case 1: return "jeden Monat"
-        case 3: return "jedes Quartal"
-        case 6: return "jedes halbe Jahr"
-        case 12: return "jedes Jahr"
-        case 24: return "alle 2 Jahre"
-        default: return "alle \(monate) Monate"
+        case 1: return String(localized: "jeden Monat")
+        case 3: return String(localized: "jedes Quartal")
+        case 6: return String(localized: "jedes halbe Jahr")
+        case 12: return String(localized: "jedes Jahr")
+        case 24: return String(localized: "alle 2 Jahre")
+        default: return String(localized: "alle \(monate) Monate")
         }
     }
 
@@ -778,9 +778,9 @@ struct AboDetailView: View {
     static func fristText(_ wert: Int, _ einheit: FristEinheit) -> String? {
         guard wert > 0 else { return nil }
         switch einheit {
-        case .tage: return wert == 1 ? "1 Tag" : "\(wert) Tage"
-        case .wochen: return wert == 1 ? "1 Woche" : "\(wert) Wochen"
-        case .monate: return wert == 1 ? "1 Monat" : "\(wert) Monate"
+        case .tage: return wert == 1 ? String(localized: "1 Tag") : String(localized: "\(wert) Tage")
+        case .wochen: return wert == 1 ? String(localized: "1 Woche") : String(localized: "\(wert) Wochen")
+        case .monate: return wert == 1 ? String(localized: "1 Monat") : String(localized: "\(wert) Monate")
         }
     }
 }
@@ -802,15 +802,15 @@ struct KuendigungsVerlauf: View {
         VStack(alignment: .leading, spacing: 12) {
             VStack(alignment: .leading, spacing: 2) {
                 Text("Verlauf").font(.headline.weight(.medium))
-                Text(abo.name.isEmpty ? "Ohne Namen" : abo.name)
+                Text(abo.name.isEmpty ? String(localized: "Ohne Namen") : abo.name)
                     .font(.callout)
                     .foregroundStyle(.secondary)
             }
 
             if eintraege.isEmpty {
                 Text(abo.istAktiv
-                     ? "Noch keine Einträge. Kündigen und Wiederaktivieren werden hier mit Datum festgehalten."
-                     : "Gekündigt, bevor es den Verlauf gab – das Datum ist nicht bekannt. Du kannst es unten nachtragen.")
+                     ? String(localized: "Noch keine Einträge. Kündigen und Wiederaktivieren werden hier mit Datum festgehalten.")
+                     : String(localized: "Gekündigt, bevor es den Verlauf gab – das Datum ist nicht bekannt. Du kannst es unten nachtragen."))
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             } else {
@@ -887,8 +887,8 @@ struct KuendigungsVerlauf: View {
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
-            Text(neuArt == .preis ? "Der aktuelle Betrag des Abos bleibt unverändert"
-                                  : "Ändert nur den Verlauf, nicht ob das Abo gerade aktiv oder gekündigt ist")
+            Text(neuArt == .preis ? String(localized: "Der aktuelle Betrag des Abos bleibt unverändert")
+                                  : String(localized: "Ändert nur den Verlauf, nicht ob das Abo gerade aktiv oder gekündigt ist"))
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -1011,15 +1011,15 @@ struct VerlaufZeile: View {
         let intervall = eintrag.intervall.flatMap(Intervall.init(rawValue:))?.titel.lowercased()
         if eintrag.art == .preis {
             let neu = Format.euro(eintrag.betrag)
-            let text = eintrag.alterBetrag.map { "\(Format.euro($0)) → \(neu)" } ?? "neu \(neu)"
+            let text = eintrag.alterBetrag.map { "\(Format.euro($0)) → \(neu)" } ?? String(localized: "neu \(neu)")
             return text + (intervall.map { " \($0)" } ?? "")
         }
         var teile: [String] = []
         if eintrag.art == .gekuendigt, let ende = eintrag.vertragsende {
-            teile.append("läuft bis \(Format.datum(Abo.letzterTag(vor: ende)))")
+            teile.append(String(localized: "läuft bis \(Format.datum(Abo.letzterTag(vor: ende)))"))
         }
-        if eintrag.art != .angelegt, let frist = eintrag.frist { teile.append("Frist \(Format.datum(frist))") }
-        if let b = eintrag.betrag { teile.append("Preis \(Format.euro(b))" + (intervall.map { " \($0)" } ?? "")) }
+        if eintrag.art != .angelegt, let frist = eintrag.frist { teile.append(String(localized: "Frist \(Format.datum(frist))")) }
+        if let b = eintrag.betrag { teile.append(String(localized: "Preis \(Format.euro(b))") + (intervall.map { " \($0)" } ?? "")) }
         return teile.isEmpty ? nil : teile.joined(separator: " · ")
     }
 }

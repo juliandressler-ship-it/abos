@@ -73,7 +73,7 @@ enum Fokus {
             let fokus = fenster.firstResponder
             // Im Suchfeld: ↑ ↓ gehen durch die Treffer, ← → bleiben beim Text
             if let editor = fokus as? NSTextView, let feld = editor.delegate as? NSTextField {
-                let istSuche = (feld.placeholderString ?? "").localizedCaseInsensitiveContains("suchen")
+                let istSuche = (feld.placeholderString ?? "").localizedCaseInsensitiveContains(String(localized: "suchen"))
                 guard istSuche, richtung == .hoch || richtung == .runter else { return ereignis }
                 NotificationCenter.default.post(name: Pfeil.gedrueckt, object: richtung, userInfo: ["erweitern": umschalt])
                 return nil
@@ -244,17 +244,17 @@ enum UebersichtStatus: String, CaseIterable, Identifiable {
 
     var titel: String {
         switch self {
-        case .aktiv: return "Aktive"
-        case .gekuendigt: return "Gekündigte"
-        case .alle: return "Alle"
+        case .aktiv: return String(localized: "Aktive")
+        case .gekuendigt: return String(localized: "Gekündigte")
+        case .alle: return String(localized: "Alle")
         }
     }
 
     var menuTitel: String {
         switch self {
-        case .aktiv: return "Nur aktive Abos"
-        case .gekuendigt: return "Nur gekündigte Abos"
-        case .alle: return "Aktive und gekündigte Abos"
+        case .aktiv: return String(localized: "Nur aktive Abos")
+        case .gekuendigt: return String(localized: "Nur gekündigte Abos")
+        case .alle: return String(localized: "Aktive und gekündigte Abos")
         }
     }
 

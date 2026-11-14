@@ -46,7 +46,7 @@ struct AbosApp: App {
     }
 
     var body: some Scene {
-        Window("Abos", id: "haupt") {
+        Window(String(localized: "Abos"), id: "haupt") {
             ContentView()
                 .id(ObjectIdentifier(container))
                 .environment(\.locale, Format.locale)
@@ -115,6 +115,9 @@ struct EinstellungenView: View {
 
     var body: some View {
         Form {
+            Section("Sprache") {
+                SprachEinstellung()
+            }
             Section("Standard-Erinnerung") {
                 Picker("Erinnerung", selection: $erste) {
                     ForEach(StandardErinnerung.optionen, id: \.tage) { Text($0.titel).tag($0.tage) }
@@ -142,7 +145,7 @@ struct EinstellungenView: View {
             }
             Section("Daten & Backup") {
                 LabeledContent("Letztes Backup",
-                               value: letztesBackup == 0 ? "noch keins"
+                               value: letztesBackup == 0 ? String(localized: "noch keins")
                                    : Format.datum(Date(timeIntervalSinceReferenceDate: letztesBackup)))
                 HStack {
                     Button("Backup exportieren…") { Sicherung.backupExportieren() }

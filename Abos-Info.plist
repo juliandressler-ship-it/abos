@@ -5,5 +5,16 @@
 	<!-- Erinnerungen als „Hinweise“: sie bleiben stehen, bis man sie wegklickt -->
 	<key>NSUserNotificationAlertStyle</key>
 	<string>alert</string>
+	<!-- Macs in anderen Sprachen als Deutsch/Englisch bekommen Englisch -->
+	<key>CFBundleDevelopmentRegion</key>
+	<string>en</string>
+	<key>CFBundleAllowMixedLocalizations</key>
+	<true/>
+	<!-- Beide Sprachen anmelden – Deutsch hat keinen eigenen Ordner, weil die Texte im Code schon deutsch sind -->
+	<key>CFBundleLocalizations</key>
+	<array>
+		<string>de</string>
+		<string>en</string>
+	</array>
 </dict>
 </plist>

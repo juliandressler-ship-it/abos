@@ -15,10 +15,12 @@ Alles bleibt auf deinem Mac. Kein Konto, keine Cloud, kein Netzwerk.
 - **Kostenverlauf:** Liniendiagramm der aufsummierten Kosten – bis heute oder mit Prognose bis zu 100 Jahre, pro Kategorie und in jeder Abo-Karte; mit den jeweils gültigen Preisen, Kündigungen und Wiederaufnahmen
 - **Mehrere Abos zusammenrechnen:** mit ⇧, ⌘ oder ⌥ in Seitenleiste oder Tabelle auswählen – die Summe erscheint unten
 - **Tastatur:** ↑ ↓ wechseln das Abo, ← → blättern durch die nächsten Kündigungsfristen, ⌘N, ⌘F, ⌘K, ⌘Z wie gewohnt
-- **Backup:** Export und Import als Datei, Export als Tabelle (CSV) für Excel oder Numbers
+- **Backup und Export:** Backup als Datei sichern und wiederherstellen; Export als Tabelle (CSV) für Excel oder Numbers – alle Abos, die gerade gezeigte Tabelle oder nur die ausgewählten
 - **Claude:** Claude kann deine Abos lesen, neue anlegen und Sparpotenziale finden (siehe unten)
 
-Die App ist auf Deutsch und läuft ab macOS 14 (Sonoma) auf Apple-Silicon- und Intel-Macs.
+Die App gibt es auf **Deutsch und Englisch** – sie richtet sich nach der Sprache des Macs, in den Einstellungen lässt sich die Sprache auch fest wählen. Sie läuft ab macOS 14 (Sonoma) auf Apple-Silicon- und Intel-Macs.
+
+*Abos is available in German and English and follows your Mac’s language; you can also choose it in Settings.*
 
 ## Installieren
 

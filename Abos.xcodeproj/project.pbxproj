@@ -82,10 +82,11 @@
 				};
 			};
 			buildConfigurationList = AB000000000000000000000B /* Build configuration list for PBXProject "Abos" */;
-			developmentRegion = de;
+			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
 				de,
+				en,
 				Base,
 			);
 			mainGroup = AB0000000000000000000004;

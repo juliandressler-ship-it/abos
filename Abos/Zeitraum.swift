@@ -9,9 +9,9 @@ enum KostenAnsicht: String, CaseIterable, Identifiable {
 
     var titel: String {
         switch self {
-        case .monat: return "Pro Monat"
-        case .jahr: return "Pro Jahr"
-        case .zeitraum: return "Zeitraum"
+        case .monat: return String(localized: "Pro Monat")
+        case .jahr: return String(localized: "Pro Jahr")
+        case .zeitraum: return String(localized: "Zeitraum")
         }
     }
 }
@@ -22,12 +22,12 @@ enum ZeitraumVorgabe: String, CaseIterable, Identifiable {
 
     var titel: String {
         switch self {
-        case .dieserMonat: return "Dieser Monat"
-        case .letzterMonat: return "Letzter Monat"
-        case .diesesJahr: return "Dieses Jahr"
-        case .letztesJahr: return "Letztes Jahr"
-        case .letzte12Monate: return "Letzte 12 Monate"
-        case .eigener: return "Eigener Zeitraum …"
+        case .dieserMonat: return String(localized: "Dieser Monat")
+        case .letzterMonat: return String(localized: "Letzter Monat")
+        case .diesesJahr: return String(localized: "Dieses Jahr")
+        case .letztesJahr: return String(localized: "Letztes Jahr")
+        case .letzte12Monate: return String(localized: "Letzte 12 Monate")
+        case .eigener: return String(localized: "Eigener Zeitraum …")
         }
     }
 
@@ -169,22 +169,29 @@ enum KostenEinheit: String, CaseIterable, Identifiable {
 
     var titel: String {
         switch self {
-        case .monat: return "Pro Monat"
-        case .woche: return "Pro Woche"
-        case .tag: return "Pro Tag"
-        case .stunde: return "Pro Stunde"
+        case .monat: return String(localized: "Pro Monat")
+        case .woche: return String(localized: "Pro Woche")
+        case .tag: return String(localized: "Pro Tag")
+        case .stunde: return String(localized: "Pro Stunde")
         }
     }
 
     var kurz: String {
         switch self {
-        case .monat: return "Monat"
-        case .woche: return "Woche"
-        case .tag: return "Tag"
-        case .stunde: return "Stunde"
+        case .monat: return String(localized: "Monat")
+        case .woche: return String(localized: "Woche")
+        case .tag: return String(localized: "Tag")
+        case .stunde: return String(localized: "Stunde")
         }
     }
 
     /// „pro Monat“, „pro Tag“ … im Satz
-    var text: String { "pro \(kurz)" }
+    var text: String {
+        switch self {
+        case .monat: return String(localized: "pro Monat")
+        case .woche: return String(localized: "pro Woche")
+        case .tag: return String(localized: "pro Tag")
+        case .stunde: return String(localized: "pro Stunde")
+        }
+    }
 }

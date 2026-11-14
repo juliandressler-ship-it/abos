@@ -158,13 +158,13 @@ struct KostenVerlauf: View {
     // Zwei Zahlen über dem Diagramm: bisher und bis zum Ende des Zeitraums
     private func summen(_ punkte: [VerlaufPunkt]) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: 24) {
-            kennzahl("Bisher ausgegeben", Format.euro(Verlauf.bisHeute(abos)))
+            kennzahl(String(localized: "Bisher ausgegeben"), Format.euro(Verlauf.bisHeute(abos)))
             if nurBisHeute {
                 if let erster = punkte.first?.monat {
-                    kennzahl("Seit", monatJahr(erster))
+                    kennzahl(String(localized: "Seit"), monatJahr(erster))
                 }
             } else {
-                kennzahl("Bis \(monatJahr(punkte.last?.monat ?? ende))", Format.euro(punkte.last?.kumuliert))
+                kennzahl(String(localized: "Bis \(monatJahr(punkte.last?.monat ?? ende))"), Format.euro(punkte.last?.kumuliert))
             }
         }
     }

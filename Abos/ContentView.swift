@@ -95,7 +95,7 @@ struct ContentView: View {
                         .accessibilityHidden(auswahl != nil)
                     if let abo = auswahl ?? zuletztGezeigt {
                         AboDetailView(abo: abo, dringlichkeit: dringlichkeit,
-                                      zurueckTitel: kategorieFilter ?? "Übersicht",
+                                      zurueckTitel: kategorieFilter ?? String(localized: "Übersicht"),
                                       fokusName: neuAngelegt == abo.persistentModelID,
                                       zurueck: { auswahl = nil },
                                       loeschen: { zuLoeschen = abo })
@@ -187,8 +187,8 @@ struct ContentView: View {
     }
 
     private var fensterTitel: String {
-        if let abo = auswahl { return abo.name.isEmpty ? "Abo" : abo.name }
-        return kategorieFilter ?? "Übersicht"
+        if let abo = auswahl { return abo.name.isEmpty ? String(localized: "Abo") : abo.name }
+        return kategorieFilter ?? String(localized: "Übersicht")
     }
 
     private var seitenleiste: some View {
@@ -239,7 +239,7 @@ struct ContentView: View {
 
     private func neu() {
         // In einer gefilterten Kategorie landet das neue Abo direkt dort
-        let kategorie = kategorieFilter == "Ohne Kategorie" ? "" : (kategorieFilter ?? "")
+        let kategorie = kategorieFilter == String(localized: "Ohne Kategorie") ? "" : (kategorieFilter ?? "")
         let abo = Abo(name: "", kategorie: kategorie)
         abo.protokollieren(VerlaufEintrag(art: .angelegt, quelle: .app))
         context.insert(abo)
@@ -289,7 +289,7 @@ struct AboZeile: View {
     var body: some View {
         HStack(spacing: 8) {
             VStack(alignment: .leading, spacing: 2) {
-                Text(abo.name.isEmpty ? "Ohne Namen" : abo.name)
+                Text(abo.name.isEmpty ? String(localized: "Ohne Namen") : abo.name)
                     .lineLimit(1)
                 if !abo.kategorie.isEmpty {
                     Text(abo.kategorie)
@@ -300,7 +300,7 @@ struct AboZeile: View {
             }
             Spacer(minLength: 4)
             if abo.istAktiv, let tage = abo.tageBisFrist(), tage >= 0, let farbe = dringlichkeit.farbe(tage) {
-                Text(tage == 0 ? "heute" : "\(tage) T")
+                Text(tage == 0 ? String(localized: "heute") : "\(tage) T")
                     .font(.caption.weight(.medium))
                     .monospacedDigit()
                     .foregroundStyle(farbe)
@@ -411,13 +411,14 @@ struct DashboardView: View {
                 .minimumScaleFactor(0.6)
                 .contentTransition(.numericText())
                 .animation(.easeOut(duration: 0.18), value: jahr)
-            Text((jahr ? "pro Jahr" : einheit.text) + " · \(Format.anzahl(aktive.count, "aktives Abo", "aktive Abos"))")
+            Text((jahr ? String(localized: "pro Jahr") : einheit.text) + " · "
+                 + Format.anzahl(aktive.count, String(localized: "aktives Abo"), String(localized: "aktive Abos")))
                 .font(.callout)
                 .foregroundStyle(.secondary)
             Spacer(minLength: 0)
             stapelBalken
             if ohneBetrag > 0 {
-                Text(Format.anzahl(ohneBetrag, "Abo", "Abos") + " ohne Betrag")
+                Text(Format.anzahl(ohneBetrag, String(localized: "anzahl.abo", defaultValue: "Abo"), String(localized: "anzahl.abos", defaultValue: "Abos")) + String(localized: " ohne Betrag"))
                     .font(.caption)
                     .foregroundStyle(.tertiary)
             }

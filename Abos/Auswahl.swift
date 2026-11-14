@@ -12,8 +12,8 @@ struct AuswahlLeiste: View {
     var body: some View {
         HStack(alignment: .center, spacing: 20) {
             VStack(alignment: .leading, spacing: 2) {
-                Text(abos.count == 1 ? "1 Abo ausgewählt" : "\(abos.count) Abos ausgewählt").fontWeight(.medium)
-                Text(abos.map { $0.name.isEmpty ? "Ohne Namen" : $0.name }.joined(separator: ", "))
+                Text(abos.count == 1 ? String(localized: "1 Abo ausgewählt") : String(localized: "\(abos.count) Abos ausgewählt")).fontWeight(.medium)
+                Text(abos.map { $0.name.isEmpty ? String(localized: "Ohne Namen") : $0.name }.joined(separator: ", "))
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
@@ -21,11 +21,15 @@ struct AuswahlLeiste: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
 
-            zahl("pro Monat", proMonat, betont: true)
-            zahl("pro Jahr", proMonat * 12)
+            zahl(String(localized: "pro Monat"), proMonat, betont: true)
+            zahl(String(localized: "pro Jahr"), proMonat * 12)
             if einheit != .monat { zahl(einheit.text, proMonat * einheit.faktor) }
-            zahl("bisher bezahlt", Verlauf.bisHeute(abos))
+            zahl(String(localized: "bisher bezahlt"), Verlauf.bisHeute(abos))
 
+            Button { Sicherung.csvExportieren(abos) } label: {
+                Label("CSV", systemImage: "square.and.arrow.up")
+            }
+            .help("Ausgewählte Abos als CSV-Datei exportieren")
             Button("Aufheben", action: aufheben)
                 .keyboardShortcut(.cancelAction)
                 .help("Auswahl aufheben (Esc)")

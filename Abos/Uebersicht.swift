@@ -13,7 +13,7 @@ struct KategorieSumme: Identifiable {
 
 enum Auswertung {
     static func kategorieName(_ abo: Abo) -> String {
-        abo.kategorie.isEmpty ? "Ohne Kategorie" : abo.kategorie
+        abo.kategorie.isEmpty ? String(localized: "Ohne Kategorie") : abo.kategorie
     }
 
     /// Aktive Abos nach Kategorie, teuerste zuerst
@@ -56,8 +56,8 @@ enum Auswertung {
             .sorted { $0.localizedStandardCompare($1) == .orderedAscending }
     }
 
-    static let vorschlaege = ["Versicherung", "Software", "Telekommunikation", "Medien",
-                              "Streaming", "Mobilität", "Sonstiges"]
+    static let vorschlaege = [String(localized: "Versicherung"), String(localized: "Software"), String(localized: "Telekommunikation"), String(localized: "Medien"),
+                              String(localized: "Streaming"), String(localized: "Mobilität"), String(localized: "Sonstiges")]
 }
 
 // MARK: - Kategorie wählen
@@ -95,7 +95,7 @@ struct KategorieMenue: View {
         } label: {
             HStack(spacing: 8) {
                 if let farbe { Farbpunkt(farbe: farbe) }
-                Text(abo.kategorie.isEmpty ? "Kategorie wählen" : abo.kategorie)
+                Text(abo.kategorie.isEmpty ? String(localized: "Kategorie wählen") : abo.kategorie)
                     .lineLimit(1)
                 Image(systemName: "chevron.up.chevron.down")
                     .font(.system(size: 9, weight: .medium))
@@ -287,9 +287,9 @@ struct UebersichtView: View {
 
     private var titel: String {
         switch status {
-        case .aktiv: return kategorie ?? "Alle aktiven Abos"
-        case .gekuendigt: return kategorie.map { "\($0) · gekündigt" } ?? "Gekündigte Abos"
-        case .alle: return kategorie.map { "\($0) · aktiv und gekündigt" } ?? "Alle Abos"
+        case .aktiv: return kategorie ?? String(localized: "Alle aktiven Abos")
+        case .gekuendigt: return kategorie.map { String(localized: "\($0) · gekündigt") } ?? String(localized: "Gekündigte Abos")
+        case .alle: return kategorie.map { String(localized: "\($0) · aktiv und gekündigt") } ?? String(localized: "Alle Abos")
         }
     }
     private var tabelle: [Abo] {
@@ -349,11 +349,11 @@ struct UebersichtView: View {
     private var zeitraum: String {
         switch ansicht {
         case .monat: return einheit.text
-        case .jahr: return "pro Jahr"
+        case .jahr: return String(localized: "pro Jahr")
         case .zeitraum:
             switch vorgabe {
-            case .diesesJahr, .letztesJahr: return "im Jahr \(zeitraumText)"
-            case .dieserMonat, .letzterMonat: return "im \(zeitraumText)"
+            case .diesesJahr, .letztesJahr: return String(localized: "im Jahr \(zeitraumText)")
+            case .dieserMonat, .letzterMonat: return String(localized: "im \(zeitraumText)")
             default: return zeitraumText
             }
         }
@@ -367,7 +367,7 @@ struct UebersichtView: View {
 
     private func prozent(_ wert: Double?) -> String {
         guard let wert, gesamt > 0 else { return "–" }
-        return "\(Int((wert / gesamt * 100).rounded())) %"
+        return String(localized: "\(Int((wert / gesamt * 100).rounded())) %")
     }
 
     /// Ein Klick auf dieselbe Kategorie hebt den Filter wieder auf
@@ -449,7 +449,7 @@ struct UebersichtView: View {
                 Spacer(minLength: 12)
                 Picker("Diagramm", selection: $zeigtVerlauf) {
                     Label("Aufteilung", systemImage: "chart.pie").tag(false)
-                    Label("Verlauf", systemImage: "chart.line.uptrend.xyaxis").tag(true)
+                    Label(String(localized: "diagramm.verlauf", defaultValue: "Verlauf"), systemImage: "chart.line.uptrend.xyaxis").tag(true)
                 }
                 .pickerStyle(.segmented)
                 .labelsHidden()
@@ -540,25 +540,25 @@ struct UebersichtView: View {
 
     private var untertitel: String {
         let ohneBetrag = inKategorie.filter { $0.betrag == nil }.count
-        var teile = [status == .gekuendigt && ansicht != .zeitraum ? "\(zeitraum) gespart" : zeitraum]
+        var teile = [status == .gekuendigt && ansicht != .zeitraum ? String(localized: "\(zeitraum) gespart") : zeitraum]
         if ansicht == .zeitraum {
-            teile.append(Format.anzahl(anzahlZahlungen, "Zahlung", "Zahlungen"))
+            teile.append(Format.anzahl(anzahlZahlungen, String(localized: "anzahl.zahlung", defaultValue: "Zahlung"), String(localized: "anzahl.zahlungen", defaultValue: "Zahlungen")))
         }
         if kategorie != nil {
-            teile.append("\(prozent(summe)) von \(Format.euro(gesamt))")
+            teile.append(String(localized: "\(prozent(summe)) von \(Format.euro(gesamt))"))
         }
         switch status {
         case .aktiv:
-            teile.append(Format.anzahl(inKategorie.count, "aktives Abo", "aktive Abos"))
+            teile.append(Format.anzahl(inKategorie.count, String(localized: "aktives Abo"), String(localized: "aktive Abos")))
         case .gekuendigt:
-            teile.append(Format.anzahl(inKategorie.count, "gekündigtes Abo", "gekündigte Abos"))
+            teile.append(Format.anzahl(inKategorie.count, String(localized: "gekündigtes Abo"), String(localized: "gekündigte Abos")))
         case .alle:
             let aktivSumme = inKategorie.filter(\.istAktiv).compactMap(wert).reduce(0, +)
             let gekSumme = inKategorie.filter { !$0.istAktiv }.compactMap(wert).reduce(0, +)
-            teile.append("aktiv \(Format.euro(aktivSumme))")
-            teile.append("gekündigt \(Format.euro(gekSumme))")
+            teile.append(String(localized: "aktiv \(Format.euro(aktivSumme))"))
+            teile.append(String(localized: "gekündigt \(Format.euro(gekSumme))"))
         }
-        if ohneBetrag > 0 { teile.append("\(ohneBetrag) ohne Betrag") }
+        if ohneBetrag > 0 { teile.append(String(localized: "\(ohneBetrag) ohne Betrag")) }
         return teile.joined(separator: " · ")
     }
 
@@ -611,8 +611,8 @@ struct UebersichtView: View {
                         .foregroundStyle(.tertiary)
                     Spacer()
                     if gespart > 0 {
-                        Text(ansicht == .zeitraum ? "spart \(Format.euro(gespart)) pro Monat"
-                                                  : "spart \(Format.euro(gespart * faktor)) \(zeitraum)")
+                        Text(ansicht == .zeitraum ? String(localized: "spart \(Format.euro(gespart)) pro Monat")
+                                                  : String(localized: "spart \(Format.euro(gespart * faktor)) \(zeitraum)"))
                             .font(.callout)
                             .foregroundStyle(.secondary)
                     }
@@ -620,7 +620,7 @@ struct UebersichtView: View {
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .help(gekuendigtOffen ? "Zuklappen" : "Gekündigte Abos zeigen")
+            .help(gekuendigtOffen ? String(localized: "Zuklappen") : String(localized: "Gekündigte Abos zeigen"))
             if gekuendigtOffen {
             Button {
                 withAnimation(.easeOut(duration: 0.2)) { gekuendigtGross.toggle() }
@@ -631,7 +631,7 @@ struct UebersichtView: View {
                     .contentShape(Rectangle())
             }
             .buttonStyle(.borderless)
-            .help(gross ? "Verkleinern" : "Vergrößern: alle gekündigten Abos mit Details")
+            .help(gross ? String(localized: "Verkleinern") : String(localized: "Vergrößern: alle gekündigten Abos mit Details"))
             }
         }
     }
@@ -740,25 +740,30 @@ struct UebersichtView: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
                 Spacer()
-                SuchFeld(text: $tabellenSuche, platzhalter: kategorie.map { "In \($0) suchen" } ?? "In Tabelle suchen")
+                SuchFeld(text: $tabellenSuche, platzhalter: kategorie.map { String(localized: "In \($0) suchen") } ?? String(localized: "In Tabelle suchen"))
                     .frame(width: 200)
+                Button { Sicherung.csvExportieren(tabelle) } label: {
+                    Label("Exportieren", systemImage: "square.and.arrow.up")
+                }
+                .buttonStyle(.borderless)
+                .help("Diese Tabelle als CSV-Datei exportieren – für Excel oder Numbers")
                 Button(action: neu) {
-                    Label(kategorie.map { "Neues Abo in \($0)" } ?? "Neues Abo", systemImage: "plus")
+                    Label(kategorie.map { String(localized: "Neues Abo in \($0)") } ?? String(localized: "Neues Abo"), systemImage: "plus")
                 }
                 .buttonStyle(.borderless)
             }
             HStack(spacing: 12) {
-                SortSpalte(titel: "Name", feld: .name, aktuell: $sortFeld, umgekehrt: $sortUmgekehrt)
+                SortSpalte(titel: String(localized: "Name"), feld: .name, aktuell: $sortFeld, umgekehrt: $sortUmgekehrt)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                SortSpalte(titel: "Kategorie", feld: .kategorie, aktuell: $sortFeld, umgekehrt: $sortUmgekehrt)
+                SortSpalte(titel: String(localized: "Kategorie"), feld: .kategorie, aktuell: $sortFeld, umgekehrt: $sortUmgekehrt)
                     .frame(width: Spalte.kategorie, alignment: .leading)
-                SortSpalte(titel: "Kündigen bis", feld: .frist, aktuell: $sortFeld, umgekehrt: $sortUmgekehrt,
+                SortSpalte(titel: String(localized: "Kündigen bis"), feld: .frist, aktuell: $sortFeld, umgekehrt: $sortUmgekehrt,
                            ausrichtung: .trailing)
                     .frame(width: Spalte.frist)
-                SortSpalte(titel: "pro Monat", feld: .preis, aktuell: $sortFeld, umgekehrt: $sortUmgekehrt,
+                SortSpalte(titel: String(localized: "pro Monat"), feld: .preis, aktuell: $sortFeld, umgekehrt: $sortUmgekehrt,
                            ausrichtung: .trailing)
                     .frame(width: Spalte.betrag)
-                SortSpalte(titel: ansicht == .zeitraum ? "Im Zeitraum" : "pro Jahr", feld: .jahr,
+                SortSpalte(titel: ansicht == .zeitraum ? String(localized: "Im Zeitraum") : String(localized: "pro Jahr"), feld: .jahr,
                            aktuell: $sortFeld, umgekehrt: $sortUmgekehrt, ausrichtung: .trailing)
                     .frame(width: Spalte.betrag)
                 Color.clear.frame(width: Spalte.oeffnen)
@@ -774,7 +779,7 @@ struct UebersichtView: View {
                 }
             }
             if tabelle.isEmpty {
-                Text(tabellenSuche.isEmpty ? "Keine Abos in dieser Auswahl" : "Nichts gefunden für „\(tabellenSuche)“")
+                Text(tabellenSuche.isEmpty ? String(localized: "Keine Abos in dieser Auswahl") : String(localized: "Nichts gefunden für „\(tabellenSuche)“"))
                     .foregroundStyle(.secondary)
                     .padding(8)
             } else {
@@ -802,7 +807,7 @@ struct UebersichtView: View {
                 if !abo.istAktiv {
                     Image(systemName: "xmark.circle")
                         .foregroundStyle(.secondary)
-                        .help("Gekündigt" + (abo.gekuendigtAm.map { " am \(Format.datum($0))" } ?? ""))
+                        .help("Gekündigt" + (abo.gekuendigtAm.map { String(localized: " am \(Format.datum($0))") } ?? ""))
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -835,8 +840,8 @@ struct UebersichtView: View {
                         .monospacedDigit()
                         .foregroundStyle(tage.isEmpty ? .tertiary : .primary)
                         .padding(.horizontal, 6)
-                        .help(tage.isEmpty ? "Keine Zahlung in diesem Zeitraum"
-                              : "Zahlungen am " + tage.map(Format.datum).joined(separator: ", "))
+                        .help(tage.isEmpty ? String(localized: "Keine Zahlung in diesem Zeitraum")
+                              : String(localized: "Zahlungen am ") + tage.map(Format.datum).joined(separator: ", "))
                 } else {
                     BetragFeld(abo: abo, faktor: 12)
                 }
@@ -924,7 +929,7 @@ struct NameFeld: View {
         } else {
             HStack(spacing: 6) {
                 Button(action: oeffnen) {
-                    Text(abo.name.isEmpty ? "Ohne Namen" : abo.name)
+                    Text(abo.name.isEmpty ? String(localized: "Ohne Namen") : abo.name)
                         .lineLimit(1)
                         .foregroundStyle(abo.name.isEmpty ? .secondary : .primary)
                         .frame(maxWidth: .infinity, minHeight: 28, alignment: .leading)
@@ -971,7 +976,7 @@ struct BetragFeld: View {
         Group {
             if bearbeiten {
                 HStack(spacing: 2) {
-                    TextField(faktor == 1 ? "pro Monat" : "pro Jahr", value: wert,
+                    TextField(faktor == 1 ? String(localized: "pro Monat") : String(localized: "pro Jahr"), value: wert,
                               format: .number.precision(.fractionLength(2)).locale(Format.locale),
                               prompt: Text("offen"))
                         .textFieldStyle(.plain)
@@ -1002,8 +1007,9 @@ struct BetragFeld: View {
     }
 
     private var hilfe: String {
-        var text = "Klicken zum Ändern – dein Anteil \(faktor == 1 ? "pro Monat" : "pro Jahr"), der Betrag pro Zahlung wird umgerechnet"
-        if abo.anteilProzent != 100 { text += " (Anteil \(Int(abo.anteilProzent)) %)" }
+        let zeitraum = faktor == 1 ? String(localized: "pro Monat") : String(localized: "pro Jahr")
+        var text = String(localized: "Klicken zum Ändern – dein Anteil \(zeitraum), der Betrag pro Zahlung wird umgerechnet")
+        if abo.anteilProzent != 100 { text += String(localized: " (Anteil \(Int(abo.anteilProzent)) %)") }
         return text
     }
 }
@@ -1061,21 +1067,21 @@ struct FristFeld: View {
 
     private var erklaerung: String {
         if abo.kuendigenBisFest != nil {
-            return "Fester Termin" + (abo.autoVerlaengerung
-                ? ", wiederholt sich \(AboDetailView.wiederholText(abo.verlaengerungsSchritt))" : "")
+            return String(localized: "Fester Termin") + (abo.autoVerlaengerung
+                ? String(localized: ", wiederholt sich \(AboDetailView.wiederholText(abo.verlaengerungsSchritt))") : "")
         }
         let frist = AboDetailView.fristText(abo.fristWert, abo.fristEinheit)
         guard let r = abo.naechstesEnde() else { return "" }
         let letzter = Format.datum(Abo.letzterTag(vor: r))
-        let teil = frist.map { "Frist \($0) vor dem letzten Tag (\(letzter))" } ?? "Keine Frist, letzter Tag ist der \(letzter)"
-        return teil + (abo.autoVerlaengerung ? "; verlängert sich am \(Format.datum(r))" : "")
+        let teil = frist.map { String(localized: "Frist \($0) vor dem letzten Tag (\(letzter))") } ?? String(localized: "Keine Frist, letzter Tag ist der \(letzter)")
+        return teil + (abo.autoVerlaengerung ? String(localized: "; verlängert sich am \(Format.datum(r))") : "")
     }
 }
 
 /// Suchfeld im Stil der Seitenleiste
 struct SuchFeld: View {
     @Binding var text: String
-    var platzhalter = "Suchen"
+    var platzhalter = String(localized: "Suchen")
     var fokus: FocusState<Bool>.Binding? = nil
 
     var body: some View {
@@ -1165,7 +1171,7 @@ struct KreisDiagramm: View {
 
     var body: some View {
         Chart(teile, id: \.name) { t in
-            SectorMark(angle: .value("Kosten", t.wert),
+            SectorMark(angle: .value(String(localized: "Kosten"), t.wert),
                        innerRadius: .ratio(innen),
                        angularInset: 1.5)
                 .cornerRadius(3)

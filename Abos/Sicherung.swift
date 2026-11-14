@@ -110,9 +110,9 @@ enum Sicherung {
     static func backupExportieren() {
         try? context.save()
         let panel = NSSavePanel()
-        panel.title = "Backup exportieren"
-        panel.message = "Sichert alle Abos inklusive Verlauf, Kontakt und Notizen"
-        panel.nameFieldStringValue = "Abos-Backup \(heute).json"
+        panel.title = String(localized: "Backup exportieren")
+        panel.message = String(localized: "Sichert alle Abos inklusive Verlauf, Kontakt und Notizen")
+        panel.nameFieldStringValue = String(localized: "Abos-Backup \(heute).json")
         panel.allowedContentTypes = [.json]
         panel.canCreateDirectories = true
         guard panel.runModal() == .OK, let url = panel.url else { return }
@@ -122,14 +122,14 @@ enum Sicherung {
             UserDefaults.standard.set(Date().timeIntervalSinceReferenceDate, forKey: letztesBackupSchluessel)
             NSWorkspace.shared.activateFileViewerSelecting([url])
         } catch {
-            fehler("Backup konnte nicht gespeichert werden", error)
+            fehler(String(localized: "Backup konnte nicht gespeichert werden"), error)
         }
     }
 
     static func backupImportieren() {
         let panel = NSOpenPanel()
-        panel.title = "Backup importieren"
-        panel.message = "Abos-Backup (.json) auswählen"
+        panel.title = String(localized: "Backup importieren")
+        panel.message = String(localized: "Abos-Backup (.json) auswählen")
         panel.allowedContentTypes = [.json]
         panel.allowsMultipleSelection = false
         guard panel.runModal() == .OK, let url = panel.url else { return }
@@ -138,7 +138,7 @@ enum Sicherung {
         do {
             sicherung = try backupLesen(Data(contentsOf: url))
         } catch {
-            fehler("Die Datei ist kein lesbares Abos-Backup", error)
+            fehler(String(localized: "Die Datei ist kein lesbares Abos-Backup"), error)
             return
         }
 
@@ -147,23 +147,24 @@ enum Sicherung {
         let ersetzt = sicherung.abos.count - neu
 
         let frage = NSAlert()
-        frage.messageText = "Backup vom \(Format.datum(sicherung.exportiertAm)) importieren?"
-        var zeilen = ["Das Backup enthält \(Format.anzahl(sicherung.abos.count, "Abo", "Abos")).",
-                      "\(neu) neu, \(ersetzt) vorhandene werden mit dem Stand aus dem Backup überschrieben."]
-        zeilen.append("Abos, die nicht im Backup sind, bleiben unverändert. Mit ⌘Z lässt sich der Import rückgängig machen.")
+        frage.messageText = String(localized: "Backup vom \(Format.datum(sicherung.exportiertAm)) importieren?")
+        let anzahl = Format.anzahl(sicherung.abos.count, String(localized: "anzahl.abo", defaultValue: "Abo"), String(localized: "anzahl.abos", defaultValue: "Abos"))
+        var zeilen = [String(localized: "Das Backup enthält \(anzahl)."),
+                      String(localized: "\(neu) neu, \(ersetzt) vorhandene werden mit dem Stand aus dem Backup überschrieben.")]
+        zeilen.append(String(localized: "Abos, die nicht im Backup sind, bleiben unverändert. Mit ⌘Z lässt sich der Import rückgängig machen."))
         frage.informativeText = zeilen.joined(separator: "\n\n")
-        frage.addButton(withTitle: "Importieren")
-        frage.addButton(withTitle: "Abbrechen")
+        frage.addButton(withTitle: String(localized: "Importieren"))
+        frage.addButton(withTitle: String(localized: "Abbrechen"))
         guard frage.runModal() == .alertFirstButtonReturn else { return }
 
         context.undoManager?.beginUndoGrouping()
         einspielen(sicherung, in: context)
         context.undoManager?.endUndoGrouping()
-        context.undoManager?.setActionName("Backup importieren")
+        context.undoManager?.setActionName(String(localized: "Backup importieren"))
         do {
             try context.save()
         } catch {
-            fehler("Import konnte nicht gespeichert werden", error)
+            fehler(String(localized: "Import konnte nicht gespeichert werden"), error)
         }
         Mitteilungen.planen(context: context)
     }
@@ -200,34 +201,35 @@ enum Sicherung {
 
     // Tabelle (CSV, z. B. für Excel oder Numbers)
 
-    static func csvExportieren() {
+    /// CSV aller Abos – oder nur der übergebenen (z. B. die gerade gezeigte Tabelle oder die Auswahl)
+    static func csvExportieren(_ nur: [Abo]? = nil) {
         try? context.save()
         let panel = NSSavePanel()
-        panel.title = "Als Tabelle exportieren"
-        panel.message = "CSV-Datei für Excel oder Numbers (nur zum Ansehen, nicht zum Wiederherstellen)"
-        panel.nameFieldStringValue = "Abos \(heute).csv"
+        panel.title = String(localized: "Als Tabelle exportieren")
+        panel.message = String(localized: "CSV-Datei für Excel oder Numbers (nur zum Ansehen, nicht zum Wiederherstellen)")
+        panel.nameFieldStringValue = String(localized: "Abos \(heute).csv")
         panel.allowedContentTypes = [.commaSeparatedText]
         panel.canCreateDirectories = true
         guard panel.runModal() == .OK, let url = panel.url else { return }
 
         do {
-            try csvText(alleAbos()).write(to: url, atomically: true, encoding: .utf8)
+            try csvText(nur ?? alleAbos()).write(to: url, atomically: true, encoding: .utf8)
             NSWorkspace.shared.activateFileViewerSelecting([url])
         } catch {
-            fehler("Tabelle konnte nicht gespeichert werden", error)
+            fehler(String(localized: "Tabelle konnte nicht gespeichert werden"), error)
         }
     }
 
     static func csvText(_ abos: [Abo]) -> String {
-        let kopf = ["Name", "Kategorie", "Status", "Betrag", "Intervall", "Anteil %", "Pro Monat", "Pro Jahr",
-                    "Kündigen bis", "Nächste Verlängerung", "Automatische Verlängerung", "Gekündigt am",
-                    "Website", "Kündigungs-Link", "Kontakt-E-Mail", "Telefon", "Vertragsnummer", "Notizen"]
+        let kopf = [String(localized: "Name"), String(localized: "Kategorie"), String(localized: "Status"), String(localized: "Betrag"), String(localized: "Intervall"), String(localized: "Anteil %"), String(localized: "Pro Monat"), String(localized: "Pro Jahr"),
+                    String(localized: "Kündigen bis"), String(localized: "Nächste Verlängerung"), String(localized: "Automatische Verlängerung"), String(localized: "Gekündigt am"),
+                    String(localized: "Website"), String(localized: "Kündigungs-Link"), String(localized: "Kontakt-E-Mail"), String(localized: "Telefon"), String(localized: "Vertragsnummer"), String(localized: "Notizen")]
         var zeilen = [kopf.map(feld).joined(separator: ";")]
         for a in abos {
             let werte = [
                 a.name, a.kategorie, a.status.titel, zahl(a.betrag), a.intervall.titel, zahl(a.anteilProzent),
                 zahl(a.proMonat), zahl(a.proJahr), datum(a.spaetestensKuendigenBis), datum(a.naechstesEnde()),
-                a.autoVerlaengerung ? "ja" : "nein", datum(a.gekuendigtAm),
+                a.autoVerlaengerung ? String(localized: "ja") : String(localized: "nein"), datum(a.gekuendigtAm),
                 a.websiteLink, a.kuendigungsLink, a.kontaktEmail, a.telefon, a.vertragsnummer, a.notizen,
             ]
             zeilen.append(werte.map(feld).joined(separator: ";"))
