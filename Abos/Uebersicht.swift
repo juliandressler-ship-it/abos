@@ -259,6 +259,9 @@ struct UebersichtView: View {
     @AppStorage("uebersichtStatus") private var status: UebersichtStatus = .aktiv
     /// Kreisdiagramm (Aufteilung nach Kategorie) oder Linie (Kostenentwicklung über die Zeit)
     @AppStorage("uebersichtDiagramm") private var zeigtVerlauf = false
+    @AppStorage("uebersichtLayout") private var layout: UebersichtLayout = .diagramme   // EXPERIMENT Kacheln
+    /// EXPERIMENT Kacheln: den Kostenverlauf gibt es nur in der Diagramm-Ansicht
+    private var verlaufSichtbar: Bool { zeigtVerlauf && layout == .diagramme }
     @AppStorage("kostenZeitraum") private var zeitraumAktiv = false
     @AppStorage("kostenEinheit") private var einheit: KostenEinheit = .monat
     @AppStorage("zeitraumVorgabe") private var vorgabe: ZeitraumVorgabe = .dieserMonat
@@ -403,7 +406,98 @@ struct UebersichtView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
+    // EXPERIMENT Kacheln (Anfang)
+    @ViewBuilder
     private var inhalt: some View {
+        if layout == .kacheln { kachelAnsicht } else { diagrammAnsicht }
+    }
+
+    /// Statt Diagramm und Tabelle: alle Abos als Kacheln
+    private var kachelAnsicht: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: 20) {
+                ansichtsleiste
+                kachelKopf
+            }
+            .padding([.horizontal, .top], 24)
+            if tabelle.isEmpty {
+                Text(tabellenSuche.isEmpty ? String(localized: "Keine Abos in dieser Auswahl") : String(localized: "Nichts gefunden für „\(tabellenSuche)“"))
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 24)
+                Spacer()
+            } else {
+                KachelRaster(abos: tabelle, markiert: $markiert, auswahl: $auswahl, dringlichkeit: dringlichkeit,
+                             wert: wert, einheit: ansicht == .zeitraum ? zeitraumText : zeitraum,
+                             farbe: { $0.kategorie.isEmpty ? nil : Palette.farbe(rang(Auswertung.kategorieName($0))) },
+                             loeschen: loeschen)
+            }
+        }
+        .onChange(of: status) { _, _ in
+            if let k = kategorie, !kategorien.contains(where: { $0.name == k }) { kategorie = nil }
+        }
+    }
+
+    /// Passt alles in eine Zeile? Sonst stehen die Knöpfe unter dem Titel
+    private var kachelKopf: some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(alignment: .lastTextBaseline, spacing: 12) {
+                kachelTitel
+                Spacer(minLength: 12)
+                kachelSteuerung
+            }
+            VStack(alignment: .leading, spacing: 12) {
+                kachelTitel
+                HStack(spacing: 12) {
+                    Spacer(minLength: 0)
+                    kachelSteuerung
+                }
+            }
+        }
+    }
+
+    private var kachelTitel: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            HStack(spacing: 8) {
+                Text(titel).font(.title3.weight(.medium))
+                if kategorie != nil {
+                    Button("Alle Kategorien") { kategorie = nil }
+                        .buttonStyle(.link)
+                }
+            }
+            Text(Format.euro(summe) + " " + (ansicht == .zeitraum ? zeitraumText : zeitraum) + " · "
+                 + Format.anzahl(tabelle.count, String(localized: "anzahl.abo", defaultValue: "Abo"), String(localized: "anzahl.abos", defaultValue: "Abos")))
+                .foregroundStyle(.secondary)
+                .monospacedDigit()
+        }
+        .fixedSize()
+    }
+
+    private var kachelSteuerung: some View {
+        HStack(spacing: 12) {
+            Picker("Sortieren nach", selection: $sortFeld) {
+                ForEach(SortFeld.allCases) { Text($0.titel).tag($0) }
+            }
+            .onChange(of: sortFeld) { _, _ in sortUmgekehrt = false }
+            Button { sortUmgekehrt.toggle() } label: {
+                Image(systemName: "arrow.up.arrow.down")
+            }
+            .buttonStyle(.borderless)
+            .help(String(localized: "Reihenfolge umdrehen") + " – " + Sortierung(feld: sortFeld, umgekehrt: sortUmgekehrt).richtung)
+            SuchFeld(text: $tabellenSuche, platzhalter: kategorie.map { String(localized: "In \($0) suchen") } ?? String(localized: "In Tabelle suchen"))
+                .frame(width: 180)
+            Button { Sicherung.csvExportieren(tabelle) } label: {
+                Label("Exportieren", systemImage: "square.and.arrow.up")
+            }
+            .buttonStyle(.borderless)
+            .help("Diese Abos als CSV-Datei exportieren – für Excel oder Numbers")
+            Button(action: neu) { Label("Neues Abo", systemImage: "plus") }
+                .buttonStyle(.borderless)
+        }
+        .fixedSize()
+    }
+    // EXPERIMENT Kacheln (Ende)
+
+    private var diagrammAnsicht: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
                 ansichtsleiste
@@ -447,6 +541,16 @@ struct UebersichtView: View {
                 .fixedSize()
                 .help("Welche Abos ausgewertet werden")
                 Spacer(minLength: 12)
+                // EXPERIMENT Kacheln: Diagramm mit Tabelle oder Kacheln
+                Picker("Ansicht", selection: $layout) {
+                    Image(systemName: "chart.pie").accessibilityLabel("Diagramm und Tabelle").tag(UebersichtLayout.diagramme)
+                    Image(systemName: "square.grid.2x2").accessibilityLabel("Kacheln").tag(UebersichtLayout.kacheln)
+                }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+                .fixedSize()
+                .help("Ansicht: Diagramm und Tabelle oder Kacheln")
+                if layout == .diagramme {   // EXPERIMENT Kacheln
                 Picker("Diagramm", selection: $zeigtVerlauf) {
                     Label("Aufteilung", systemImage: "chart.pie").tag(false)
                     Label(String(localized: "diagramm.verlauf", defaultValue: "Verlauf"), systemImage: "chart.line.uptrend.xyaxis").tag(true)
@@ -455,9 +559,10 @@ struct UebersichtView: View {
                 .labelsHidden()
                 .fixedSize()
                 .help("Aufteilung nach Kategorie oder Kostenentwicklung über die Zeit")
+                }   // EXPERIMENT Kacheln
             }
             // Zweite Zeile: was das gewählte Diagramm zeigt
-            if zeigtVerlauf {
+            if verlaufSichtbar {   // EXPERIMENT Kacheln: vorher zeigtVerlauf
                 HStack(spacing: 8) {
                     Text("Prognose").foregroundStyle(.secondary)
                     VerlaufZeitraumPicker()
@@ -465,7 +570,7 @@ struct UebersichtView: View {
             } else {
                 KostenUmschalter(ansicht: ansichtBindung)
             }
-            if !zeigtVerlauf && ansicht == .zeitraum {
+            if !verlaufSichtbar && ansicht == .zeitraum {   // EXPERIMENT Kacheln: vorher !zeigtVerlauf
                 HStack(spacing: 12) {
                     if vorgabe == .eigener {
                         DatePicker("Von", selection: von, displayedComponents: .date)

@@ -97,6 +97,22 @@
         }
       }
     },
+    " · %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": " · %@"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": " · %@"
+          }
+        }
+      }
+    },
     " – Vertragsnr. %@": {
       "localizations": {
         "de": {
@@ -253,6 +269,54 @@
           "stringUnit": {
             "state": "translated",
             "value": "%lld subscriptions selected"
+          }
+        }
+      }
+    },
+    "%lld Abos löschen": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld Abos löschen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete %lld Subscriptions"
+          }
+        }
+      }
+    },
+    "%lld Abos löschen?": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld Abos löschen?"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete %lld subscriptions?"
+          }
+        }
+      }
+    },
+    "%lld Abos löschen…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld Abos löschen…"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete %lld Subscriptions…"
           }
         }
       }
@@ -1233,6 +1297,38 @@
         }
       }
     },
+    "Ansicht": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ansicht"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "View"
+          }
+        }
+      }
+    },
+    "Ansicht: Diagramm und Tabelle oder Kacheln": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ansicht: Diagramm und Tabelle oder Kacheln"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "View: chart and table or tiles"
+          }
+        }
+      }
+    },
     "Anteil": {
       "localizations": {
         "de": {
@@ -1389,6 +1485,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Export the selected subscriptions as a CSV file"
+          }
+        }
+      }
+    },
+    "Auswahl": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Auswahl"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Selection"
           }
         }
       }
@@ -1809,6 +1921,22 @@
         }
       }
     },
+    "Diagramm und Tabelle": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diagramm und Tabelle"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chart and Table"
+          }
+        }
+      }
+    },
     "Die Datei ist kein lesbares Abos-Backup": {
       "localizations": {
         "de": {
@@ -1837,6 +1965,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "The new language applies after restarting the app."
+          }
+        }
+      }
+    },
+    "Diese Abos als CSV-Datei exportieren – für Excel oder Numbers": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diese Abos als CSV-Datei exportieren – für Excel oder Numbers"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Export these subscriptions as a CSV file – for Excel or Numbers"
           }
         }
       }
@@ -1901,6 +2045,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "This year"
+          }
+        }
+      }
+    },
+    "Doppelklick öffnet das Abo": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Doppelklick öffnet das Abo"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Double-click to open the subscription"
           }
         }
       }
@@ -2913,6 +3073,22 @@
         }
       }
     },
+    "Kacheln": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kacheln"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tiles"
+          }
+        }
+      }
+    },
     "Kategorie": {
       "localizations": {
         "de": {
@@ -2989,6 +3165,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "No subscriptions in this selection"
+          }
+        }
+      }
+    },
+    "Keine Frist": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keine Frist"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No deadline"
           }
         }
       }
@@ -4381,6 +4573,86 @@
           "stringUnit": {
             "state": "translated",
             "value": "Since"
+          }
+        }
+      }
+    },
+    "Seitenleiste": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Seitenleiste"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sidebar"
+          }
+        }
+      }
+    },
+    "Seitenleiste ausblenden": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Seitenleiste ausblenden"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hide Sidebar"
+          }
+        }
+      }
+    },
+    "Seitenleiste ausblenden (⌃⌘S)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Seitenleiste ausblenden (⌃⌘S)"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hide sidebar (⌃⌘S)"
+          }
+        }
+      }
+    },
+    "Seitenleiste einblenden": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Seitenleiste einblenden"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show Sidebar"
+          }
+        }
+      }
+    },
+    "Seitenleiste einblenden (⌃⌘S)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Seitenleiste einblenden (⌃⌘S)"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show sidebar (⌃⌘S)"
           }
         }
       }
@@ -6637,6 +6909,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Overview"
+          }
+        }
+      }
+    },
+    "Übersicht als": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Übersicht als"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Overview as"
           }
         }
       }

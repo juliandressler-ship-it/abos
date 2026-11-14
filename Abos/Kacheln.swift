@@ -1,0 +1,223 @@
+// EXPERIMENT Kacheln – diese ganze Datei gehört zum Experiment und kann komplett gelöscht werden.
+// Zurück zum alten Stand: `git switch main` und neu installieren (siehe Ende der Datei).
+
+import AppKit
+import SwiftUI
+
+/// Wie die Übersicht aufgebaut ist: Diagramm mit Tabelle oder ein Raster aus Kacheln
+enum UebersichtLayout: String, CaseIterable, Identifiable {
+    case diagramme, kacheln
+    var id: String { rawValue }
+}
+
+// MARK: - Raster
+
+/// Alle Abos der Übersicht als Kacheln – Bedienung wie im Finder:
+/// Klick wählt aus, Doppelklick oder Return öffnet, ⇧/⌘/⌥ wählen mehrere,
+/// Pfeiltasten bewegen die Auswahl, ⌫ löscht nach Rückfrage.
+struct KachelRaster: View {
+    let abos: [Abo]
+    @Binding var markiert: Set<Abo>
+    @Binding var auswahl: Abo?
+    let dringlichkeit: Dringlichkeit
+    /// Betrag in der gewählten Ansicht (pro Monat, Jahr, Zeitraum …)
+    let wert: (Abo) -> Double?
+    /// „pro Monat“, „pro Jahr“, „im November 2026“ …
+    let einheit: String
+    let farbe: (Abo) -> Color?
+    var loeschen: (Abo) -> Void
+
+    /// Ausgangspunkt und bewegliches Ende für ⇧-Bereiche
+    @State private var anker: Int?
+    @State private var ende: Int?
+    @State private var breite: CGFloat = 800
+
+    private let mindestBreite: CGFloat = 200
+    private let abstand: CGFloat = 12
+
+    /// Spaltenzahl aus der Breite – nötig, damit ↑ ↓ genau eine Zeile springen
+    private var spalten: Int { max(1, Int((breite + abstand) / (mindestBreite + abstand))) }
+
+    var body: some View {
+        ScrollViewReader { proxy in
+            ScrollView {
+                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: abstand), count: spalten),
+                          spacing: abstand) {
+                    ForEach(Array(abos.enumerated()), id: \.element.persistentModelID) { i, abo in
+                        AboKachel(abo: abo, markiert: markiert.contains(abo), dringlichkeit: dringlichkeit,
+                                  wert: wert(abo), einheit: einheit, farbe: farbe(abo))
+                            .id(abo.persistentModelID)
+                            .contentShape(RoundedRectangle(cornerRadius: 12))
+                            .onTapGesture { klick(abo, index: i) }
+                            .contextMenu {
+                                AboMenue(abo: abo, oeffnen: { auswahl = abo }, loeschen: { loeschen(abo) })
+                            }
+                    }
+                }
+                .padding(.horizontal, 24)
+                .padding(.top, 4)
+                // Platz für die Auswahl-Leiste unten
+                .padding(.bottom, 96)
+                .onGeometryChange(for: CGFloat.self) { $0.size.width - 48 } action: { breite = $0 }
+            }
+            .onReceive(NotificationCenter.default.publisher(for: Fokus.Pfeil.gedrueckt)) { n in
+                pfeil(n, proxy: proxy)
+            }
+            .onReceive(NotificationCenter.default.publisher(for: Fokus.Taste.gedrueckt)) { n in
+                guard Fokus.kachelnAktiv, (n.object as? Fokus.Taste) == .alle else { return }
+                markiert = Set(abos)
+                anker = 0
+                ende = abos.count - 1
+            }
+        }
+    }
+
+    /// Klick wählt aus, Doppelklick öffnet. ⌘ oder ⌥: einzeln dazu/weg. ⇧: Bereich.
+    private func klick(_ abo: Abo, index i: Int) {
+        // Tastaturfokus aus Seitenleiste oder Suchfeld holen, damit die Pfeiltasten im Raster wirken
+        if let fenster = NSApp.keyWindow, fenster.firstResponder is NSText || fenster.firstResponder is NSTableView {
+            fenster.makeFirstResponder(nil)
+        }
+        let tasten = NSEvent.modifierFlags
+        if (NSApp.currentEvent?.clickCount ?? 1) >= 2 && tasten.intersection([.shift, .command, .option]).isEmpty {
+            auswahl = abo
+            return
+        }
+        if tasten.contains(.shift) {
+            let a = anker ?? abos.firstIndex { markiert.contains($0) } ?? i
+            anker = a
+            ende = i
+            markiert = Set(abos[min(a, i)...max(a, i)])
+        } else if tasten.contains(.command) || tasten.contains(.option) {
+            if markiert.contains(abo) { markiert.remove(abo) } else { markiert.insert(abo) }
+            anker = i
+            ende = i
+        } else {
+            markiert = [abo]
+            anker = i
+            ende = i
+        }
+    }
+
+    /// ← → eine Kachel, ↑ ↓ eine Zeile; mit ⇧ wird die Auswahl erweitert
+    private func pfeil(_ n: Notification, proxy: ScrollViewProxy) {
+        guard Fokus.kachelnAktiv, let pfeil = n.object as? Fokus.Pfeil, !abos.isEmpty else { return }
+        let erweitern = (n.userInfo?["erweitern"] as? Bool) ?? false
+        let position = ende.flatMap { $0 < abos.count && markiert.contains(abos[$0]) ? $0 : nil }
+            ?? abos.firstIndex { markiert.contains($0) }
+        guard let position else {
+            let start = (pfeil == .runter || pfeil == .rechts) ? 0 : abos.count - 1
+            markiert = [abos[start]]
+            anker = start
+            ende = start
+            proxy.scrollTo(abos[start].persistentModelID)
+            return
+        }
+        let schritt: Int
+        switch pfeil {
+        case .links: schritt = -1
+        case .rechts: schritt = 1
+        case .hoch: schritt = -spalten
+        case .runter: schritt = spalten
+        }
+        var ziel = position + schritt
+        // Oben/unten am Rand: in der Spalte bleiben statt umzubrechen
+        if ziel < 0 { ziel = pfeil == .hoch ? position : 0 }
+        if ziel >= abos.count { ziel = pfeil == .runter ? abos.count - 1 : position }
+        if erweitern {
+            let a = anker ?? position
+            anker = a
+            markiert = Set(abos[min(a, ziel)...max(a, ziel)])
+        } else {
+            markiert = [abos[ziel]]
+            anker = ziel
+        }
+        ende = ziel
+        withAnimation(.easeOut(duration: 0.15)) { proxy.scrollTo(abos[ziel].persistentModelID) }
+    }
+}
+
+// MARK: - Eine Kachel
+
+struct AboKachel: View {
+    let abo: Abo
+    let markiert: Bool
+    let dringlichkeit: Dringlichkeit
+    let wert: Double?
+    let einheit: String
+    let farbe: Color?
+    @State private var hover = false
+
+    private var name: String { abo.name.isEmpty ? String(localized: "Ohne Namen") : abo.name }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(alignment: .top) {
+                symbol
+                Spacer(minLength: 8)
+                VStack(alignment: .trailing, spacing: 0) {
+                    Text(Format.euro(wert))
+                        .font(.system(size: 17, weight: .medium))
+                        .monospacedDigit()
+                        .foregroundStyle(wert == nil || !abo.istAktiv ? .secondary : .primary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                    Text(einheit)
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
+                        .lineLimit(1)
+                }
+            }
+            Spacer(minLength: 12)
+            Text(name)
+                .font(.body.weight(.medium))
+                .foregroundStyle(abo.name.isEmpty ? .secondary : .primary)
+                .lineLimit(1)
+            unterzeile
+                .font(.callout)
+                .lineLimit(1)
+                .padding(.top, 2)
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, minHeight: 116, maxHeight: 116, alignment: .topLeading)
+        .background(Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: 12))
+        .background(Color.accentColor.opacity(markiert ? 0.14 : 0), in: RoundedRectangle(cornerRadius: 12))
+        .overlay(RoundedRectangle(cornerRadius: 12)
+            .strokeBorder(markiert ? Color.accentColor.opacity(0.8) : Color.primary.opacity(hover ? 0.16 : 0.08),
+                          lineWidth: markiert ? 2 : 1))
+        .opacity(abo.istAktiv ? 1 : 0.75)
+        .onHover { hover = $0 }
+        .help(String(localized: "Doppelklick öffnet das Abo"))
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(markiert ? .isSelected : [])
+    }
+
+    /// Anfangsbuchstabe auf der Farbe der Kategorie
+    private var symbol: some View {
+        let f = farbe ?? Color.secondary
+        return Text(String(name.prefix(1)).uppercased())
+            .font(.system(size: 17, weight: .semibold))
+            .foregroundStyle(f)
+            .frame(width: 36, height: 36)
+            .background(f.opacity(0.16), in: RoundedRectangle(cornerRadius: 9))
+    }
+
+    @ViewBuilder
+    private var unterzeile: some View {
+        if !abo.istAktiv {
+            Text(String(localized: "Gekündigt") + (abo.gekuendigtAm.map { String(localized: " am \(Format.datum($0))") } ?? ""))
+                .foregroundStyle(.secondary)
+        } else if let frist = abo.spaetestensKuendigenBis, let tage = abo.tageBisFrist() {
+            (Text(Format.inTagen(tage)).foregroundStyle(dringlichkeit.farbe(tage) ?? Color.secondary)
+                + Text(" · \(Format.datum(frist))").foregroundStyle(.tertiary))
+                .help("Spätestens kündigen bis \(Format.datum(frist))")
+        } else {
+            Text(abo.kategorie.isEmpty ? String(localized: "Keine Frist") : abo.kategorie)
+                .foregroundStyle(.tertiary)
+        }
+    }
+}
+
+// Rückgängig machen:
+//   cd ~/Desktop/Abo/Abos && git switch main && ./"App aktualisieren.command"
+// Alle Stellen des Experiments findet man mit:  grep -rn "EXPERIMENT Kacheln" Abos
