@@ -63,3 +63,25 @@ struct AuswahlLeiste: View {
         .fixedSize()
     }
 }
+
+// MARK: - Klick daneben hebt die Auswahl auf
+
+/// Meldet die sichtbare Fläche dieser Ansicht als „gehört zur Auswahl“: Ein Klick hier hebt sie nicht auf.
+/// Scrollt die Ansicht teilweise aus dem Bild, zählt nur der sichtbare Teil.
+struct AuswahlBereich: ViewModifier {
+    @State private var schluessel = UUID()
+
+    func body(content: Content) -> some View {
+        content
+            .onGeometryChange(for: CGRect.self) { g in
+                let rahmen = g.frame(in: .global)
+                guard let sicht = g.bounds(of: .scrollView) else { return rahmen }
+                return rahmen.intersection(sicht.offsetBy(dx: rahmen.minX, dy: rahmen.minY))
+            } action: { Fokus.auswahlBereiche[schluessel] = $0 }
+            .onDisappear { Fokus.auswahlBereiche[schluessel] = nil }
+    }
+}
+
+extension View {
+    func auswahlBereich() -> some View { modifier(AuswahlBereich()) }
+}

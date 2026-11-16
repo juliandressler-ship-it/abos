@@ -1,6 +1,3 @@
-// EXPERIMENT Kacheln – diese ganze Datei gehört zum Experiment und kann komplett gelöscht werden.
-// Zurück zum alten Stand: `git switch main` und neu installieren (siehe Ende der Datei).
-
 import AppKit
 import SwiftUI
 
@@ -68,6 +65,7 @@ struct KachelRaster: View {
                                   wert: wert(abo), einheit: einheit, farbe: farbe(abo))
                             .id(abo.persistentModelID)
                             .contentShape(RoundedRectangle(cornerRadius: 12))
+                            .auswahlBereich()
                             .onTapGesture { klick(abo, index: i) }
                             .contextMenu {
                                 AboMenue(abo: abo, oeffnen: { auswahl = abo }, loeschen: { loeschen(abo) })
@@ -238,11 +236,7 @@ struct AboKachel: View {
     }
 }
 
-// Rückgängig machen:
-//   cd ~/Desktop/Abo/Abos && git switch main && ./"App aktualisieren.command"
-// Alle Stellen des Experiments findet man mit:  grep -rn "EXPERIMENT Kacheln" Abos
-
-// MARK: - Seitenleiste einklappen (EXPERIMENT Kacheln)
+// MARK: - Seitenleiste einklappen
 
 /// Kleiner Pfeil: ‹ klappt die Seitenleiste ein, › klappt sie wieder auf
 struct EinklappKnopf: View {

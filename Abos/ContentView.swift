@@ -52,7 +52,6 @@ struct ContentView: View {
     @AppStorage(StandardErinnerung.zweiteSchluessel) private var standard2 = -1
     @AppStorage("sortFeld") private var sortFeld: SortFeld = .name
     @AppStorage("sortUmgekehrt") private var sortUmgekehrt = false
-    // EXPERIMENT Kacheln (Anfang)
     @AppStorage("seitenleisteSichtbar") private var seitenleisteSichtbar = true
     /// Breite der Seitenleiste; nur in dem Bereich verstellbar, in dem alles sauber passt
     @AppStorage("seitenleisteBreite") private var seitenleisteBreite: Double = 300
@@ -70,7 +69,6 @@ struct ContentView: View {
         if liste.count == 1 { zuLoeschen = liste[0] } else if liste.count > 1 { zuLoeschenMehrere = liste }
     }
     private func auswahlAufheben() { markiert = []; anker = nil; bereichEnde = nil }
-    // EXPERIMENT Kacheln (Ende)
 
     /// Farben der Fristen: orange ab 14 Tagen, rot ab 3 Tagen (unabhängig von den Mitteilungen)
     private var dringlichkeit: Dringlichkeit { Dringlichkeit(14, 3) }
@@ -97,9 +95,8 @@ struct ContentView: View {
     var body: some View {
         VStack(spacing: 0) {
             DashboardView(abos: abos, auswahl: $auswahl, kategorie: $kategorieFilter, dringlichkeit: dringlichkeit,
-                          markiert: markiertListe, aufheben: auswahlAufheben)   // EXPERIMENT Kacheln: markiert, aufheben
+                          markiert: markiertListe, aufheben: auswahlAufheben)
             Divider()
-            // EXPERIMENT Kacheln: vorher HSplitView mit `seitenleiste.frame(minWidth: 260, idealWidth: 300, maxWidth: 340)`.
             // Eigene Leiste mit Trenner, damit sie nie zu schmal wird und sich einklappen lässt.
             HStack(spacing: 0) {
                 if seitenleisteSichtbar {
@@ -141,6 +138,7 @@ struct ContentView: View {
                     if markiert.count > 1 || (markiert.count == 1 && auswahl == nil) {
                         AuswahlLeiste(abos: reihe.filter { markiert.contains($0) },
                                       aufheben: auswahlAufheben)
+                            .auswahlBereich()
                             .transition(.move(edge: .bottom).combined(with: .opacity))
                     }
                 }
@@ -154,7 +152,7 @@ struct ContentView: View {
                     }
                 }
             }
-            // EXPERIMENT Kacheln: mehrere markierte Abos löschen
+            // Mehrere markierte Abos löschen
             .confirmationDialog("\(zuLoeschenMehrere.count) Abos löschen?",
                                 isPresented: Binding(get: { !zuLoeschenMehrere.isEmpty }, set: { if !$0 { zuLoeschenMehrere = [] } })) {
                 Button("\(zuLoeschenMehrere.count) Abos löschen", role: .destructive) {
@@ -176,7 +174,7 @@ struct ContentView: View {
             }
         }
         .frame(minWidth: 1000, minHeight: 680)
-        .onDeleteCommand { if let a = auswahl { zuLoeschen = a } else { markiertLoeschen() } }   // EXPERIMENT Kacheln: else-Zweig
+        .onDeleteCommand { if let a = auswahl { zuLoeschen = a } else { markiertLoeschen() } }
         .confirmationDialog("„\(zuLoeschen?.name ?? "")“ löschen?",
                             isPresented: Binding(get: { zuLoeschen != nil }, set: { if !$0 { zuLoeschen = nil } })) {
             Button("Löschen", role: .destructive) {
@@ -191,22 +189,24 @@ struct ContentView: View {
         .focusedSceneValue(\.aboAuswahl, $auswahl)
         .focusedSceneValue(\.fensterAktionen, FensterAktionen(neu: neu,
                                                               suchen: {
-                                                                  // EXPERIMENT Kacheln: ausgeblendete Seitenleiste für die Suche zeigen
+                                                                  // Ausgeblendete Seitenleiste für die Suche zeigen
                                                                   if !seitenleisteSichtbar {
                                                                       seitenleisteSichtbar = true
                                                                       DispatchQueue.main.async { sucheAktiv = true }
                                                                   } else { sucheAktiv = true }
                                                               },
                                                               loeschen: { zuLoeschen = $0 },
-                                                              markiertAnzahl: auswahl == nil ? markiert.count : 0,   // EXPERIMENT Kacheln
+                                                              markiertAnzahl: auswahl == nil ? markiert.count : 0,
                                                               markiertLoeschen: markiertLoeschen))
         .onAppear {
             context.undoManager = undoManager
             Fokus.startFokusLoesen()
+            // Klick neben die markierten Abos der Übersicht hebt die Auswahl auf
+            Fokus.auswahlAufheben = { if auswahl == nil && !markiert.isEmpty { auswahlAufheben() } }
         }
         // ↑ ↓: durch die Abos in der Reihenfolge der Seitenleiste
         .onReceive(NotificationCenter.default.publisher(for: Fokus.Pfeil.gedrueckt)) { n in
-            guard !Fokus.kachelnAktiv else { return }   // EXPERIMENT Kacheln: das Raster bewegt die Auswahl selbst
+            guard !Fokus.kachelnAktiv else { return }   // Das Raster bewegt die Auswahl selbst
             guard let pfeil = n.object as? Fokus.Pfeil, pfeil == .hoch || pfeil == .runter else { return }
             let reihe = self.reihe
             guard !reihe.isEmpty else { return }
@@ -229,7 +229,7 @@ struct ContentView: View {
                 auswahlSetzen([reihe[ziel]])
             }
         }
-        // EXPERIMENT Kacheln (Anfang): Return öffnet, ⌫ löscht die markierten Kacheln
+        // Return öffnet, ⌫ löscht die markierten Kacheln
         .onChange(of: kachelnAktiv, initial: true) { _, neu in Fokus.kachelnAktiv = neu }
         .onReceive(NotificationCenter.default.publisher(for: Fokus.Taste.gedrueckt)) { n in
             guard Fokus.kachelnAktiv, let taste = n.object as? Fokus.Taste else { return }
@@ -239,7 +239,6 @@ struct ContentView: View {
             case .alle: break   // erledigt das Raster
             }
         }
-        // EXPERIMENT Kacheln (Ende)
         .onChange(of: undoManager) { _, neu in context.undoManager = neu }
         .task { await Mitteilungen.berechtigungAnfragen() }
         .task(id: planSignatur) { Mitteilungen.planen(context: context) }
@@ -255,14 +254,14 @@ struct ContentView: View {
 
     private var seitenleiste: some View {
         VStack(spacing: 8) {
-            HStack(spacing: 4) {   // EXPERIMENT Kacheln: Einklapp-Pfeil neben der Suche
+            HStack(spacing: 4) {   // Einklapp-Pfeil neben der Suche
             SuchFeld(text: $suche, fokus: $sucheAktiv)
                 EinklappKnopf(richtung: .zu, aktion: seitenleisteUmschalten)
             }
             .padding(.horizontal, 12)
             .padding(.top, 12)
 
-            // EXPERIMENT Kacheln: bei schmaler Seitenleiste zeigt der Richtungsknopf nur das Symbol
+            // Bei schmaler Seitenleiste zeigt der Richtungsknopf nur das Symbol
             SortierLeiste(feld: $sortFeld, umgekehrt: $sortUmgekehrt,
                           kompakt: SeitenleistenTrenner.begrenzt(seitenleisteBreite) < 330)
                 .padding(.horizontal, 12)
@@ -421,14 +420,14 @@ struct DashboardView: View {
     @Binding var auswahl: Abo?
     @Binding var kategorie: String?
     let dringlichkeit: Dringlichkeit
-    // EXPERIMENT Kacheln: ausgewählte Abos – ihre Summe ersetzt oben links die Gesamtsumme
+    // Ausgewählte Abos – ihre Summe ersetzt oben links die Gesamtsumme
     var markiert: [Abo] = []
     var aufheben: () -> Void = {}
     @AppStorage("zeitraumJahr") private var jahr = false
     @AppStorage("kostenEinheit") private var einheit: KostenEinheit = .monat
 
     private var aktive: [Abo] { abos.filter(\.istAktiv) }
-    /// EXPERIMENT Kacheln: Summe zeigen ab zwei Abos – oder schon bei einem, wenn keine Karte offen ist
+    /// Summe zeigen ab zwei Abos – oder schon bei einem, wenn keine Karte offen ist
     private var zeigtAuswahl: Bool { markiert.count > 1 || (markiert.count == 1 && auswahl == nil) }
     private var faktor: Double { jahr ? 12 : einheit.faktor }
     private var monatOderJahr: Binding<KostenAnsicht> {
@@ -456,7 +455,7 @@ struct DashboardView: View {
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
-            Group { if zeigtAuswahl { auswahlSumme } else { gesamt } }.frame(width: 300)   // EXPERIMENT Kacheln
+            Group { if zeigtAuswahl { auswahlSumme.auswahlBereich() } else { gesamt } }.frame(width: 300)
             fristen.frame(maxWidth: .infinity)
             kategorieListe.frame(width: 260)
         }
@@ -503,7 +502,6 @@ struct DashboardView: View {
         .help("Übersicht öffnen")
     }
 
-    // EXPERIMENT Kacheln (Anfang)
     /// Summe der ausgewählten Abos an der Stelle der Gesamtsumme
     private var auswahlSumme: some View {
         let proMonat = markiert.compactMap(\.proMonat).reduce(0, +)
@@ -545,7 +543,6 @@ struct DashboardView: View {
             }
         }
     }
-    // EXPERIMENT Kacheln (Ende)
 
     private var stapelBalken: some View {
         var teile: [(rang: Int, wert: Double)] = []
@@ -621,7 +618,7 @@ struct DashboardView: View {
 
     /// ← →: ein Kalenderblatt weiter oder zurück
     private func fristPfeil(_ n: Notification, anzahl: Int) {
-        guard !Fokus.kachelnAktiv else { return }   // EXPERIMENT Kacheln: ← → gehören dann dem Raster
+        guard !Fokus.kachelnAktiv else { return }   // ← → gehören dann dem Raster
         guard let pfeil = n.object as? Fokus.Pfeil, anzahl > 0 else { return }
         let pos = fristPosition ?? 0
         if pfeil == .rechts { fristBlaettern(zu: min(anzahl - 1, pos + 1)) }

@@ -7,14 +7,15 @@ Alles bleibt auf deinem Mac. Kein Konto, keine Cloud, kein Netzwerk.
 ## Was Abos kann
 
 - **Übersicht:** Gesamtkosten pro Monat, Jahr, Woche, Tag oder Stunde – oder die tatsächlichen Zahlungen in einem Zeitraum, aufgeteilt nach Kategorie als Kreisdiagramm
+- **Kacheln oder Diagramm:** die Übersicht wahlweise als Diagramm mit Tabelle oder als Raster aus Kacheln (Darstellung → Übersicht als); die Seitenleiste lässt sich mit dem Pfeil neben der Suche oder ⌃⌘S einklappen
 - **Kündigungsfristen:** „Kündigen bis“ wird aus Verlängerungstag und Frist berechnet – oder du trägst ein festes Datum ein
 - **Erinnerungen:** macOS-Mitteilung am Tag der Frist (in den Einstellungen änderbar), mit den Knöpfen „Erledigt“, „Gekündigt“ und „In 1 Woche erneut“
 - **Verlauf:** wann gekündigt, wann wieder aktiviert und wie sich der Preis entwickelt hat – Einträge lassen sich korrigieren und nachtragen
 - **Kündigen per E-Mail:** öffnet eine fertig formulierte Kündigung in deinem Mailprogramm
 - **Auswertung:** aktive, gekündigte oder alle Abos – und was Kündigungen gespart haben
 - **Kostenverlauf:** Liniendiagramm der aufsummierten Kosten – bis heute oder mit Prognose bis zu 100 Jahre, pro Kategorie und in jeder Abo-Karte; mit den jeweils gültigen Preisen, Kündigungen und Wiederaufnahmen
-- **Mehrere Abos zusammenrechnen:** mit ⇧, ⌘ oder ⌥ in Seitenleiste oder Tabelle auswählen – die Summe erscheint unten
-- **Tastatur:** ↑ ↓ wechseln das Abo, ← → blättern durch die nächsten Kündigungsfristen, ⌘N, ⌘F, ⌘K, ⌘Z wie gewohnt
+- **Mehrere Abos zusammenrechnen:** mit ⇧, ⌘ oder ⌥ in Seitenleiste, Tabelle oder Kacheln auswählen – die Summe erscheint oben links und unten; ein Klick daneben hebt die Auswahl auf
+- **Tastatur:** ↑ ↓ wechseln das Abo (in den Kacheln alle vier Pfeile, Return öffnet, ⌫ löscht nach Rückfrage, ⌘A wählt alle), ← → blättern durch die nächsten Kündigungsfristen, ⌘N, ⌘F, ⌘K, ⌘Z wie gewohnt
 - **Backup und Export:** Backup als Datei sichern und wiederherstellen; Export als Tabelle (CSV) für Excel oder Numbers – alle Abos, die gerade gezeigte Tabelle oder nur die ausgewählten
 - **Claude:** Claude kann deine Abos lesen, neue anlegen und Sparpotenziale finden (siehe unten)
 

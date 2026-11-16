@@ -259,8 +259,8 @@ struct UebersichtView: View {
     @AppStorage("uebersichtStatus") private var status: UebersichtStatus = .aktiv
     /// Kreisdiagramm (Aufteilung nach Kategorie) oder Linie (Kostenentwicklung über die Zeit)
     @AppStorage("uebersichtDiagramm") private var zeigtVerlauf = false
-    @AppStorage("uebersichtLayout") private var layout: UebersichtLayout = .diagramme   // EXPERIMENT Kacheln
-    /// EXPERIMENT Kacheln: den Kostenverlauf gibt es nur in der Diagramm-Ansicht
+    @AppStorage("uebersichtLayout") private var layout: UebersichtLayout = .diagramme
+    /// Den Kostenverlauf gibt es nur in der Diagramm-Ansicht
     private var verlaufSichtbar: Bool { zeigtVerlauf && layout == .diagramme }
     @AppStorage("kostenZeitraum") private var zeitraumAktiv = false
     @AppStorage("kostenEinheit") private var einheit: KostenEinheit = .monat
@@ -406,7 +406,6 @@ struct UebersichtView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
-    // EXPERIMENT Kacheln (Anfang)
     @ViewBuilder
     private var inhalt: some View {
         if layout == .kacheln { kachelAnsicht } else { diagrammAnsicht }
@@ -566,7 +565,6 @@ struct UebersichtView: View {
         }
         .fixedSize()
     }
-    // EXPERIMENT Kacheln (Ende)
 
     private var diagrammAnsicht: some View {
         ScrollView {
@@ -612,7 +610,7 @@ struct UebersichtView: View {
                 .fixedSize()
                 .help("Welche Abos ausgewertet werden")
                 Spacer(minLength: 12)
-                // EXPERIMENT Kacheln: Diagramm mit Tabelle oder Kacheln
+                // Diagramm mit Tabelle oder Kacheln
                 Picker("Ansicht", selection: $layout) {
                     Image(systemName: "chart.pie").accessibilityLabel("Diagramm und Tabelle").tag(UebersichtLayout.diagramme)
                     Image(systemName: "square.grid.2x2").accessibilityLabel("Kacheln").tag(UebersichtLayout.kacheln)
@@ -621,7 +619,7 @@ struct UebersichtView: View {
                 .labelsHidden()
                 .fixedSize()
                 .help("Ansicht: Diagramm und Tabelle oder Kacheln")
-                if layout == .diagramme {   // EXPERIMENT Kacheln
+                if layout == .diagramme {
                 Picker("Diagramm", selection: $zeigtVerlauf) {
                     Label("Aufteilung", systemImage: "chart.pie").tag(false)
                     Label(String(localized: "diagramm.verlauf", defaultValue: "Verlauf"), systemImage: "chart.line.uptrend.xyaxis").tag(true)
@@ -630,10 +628,10 @@ struct UebersichtView: View {
                 .labelsHidden()
                 .fixedSize()
                 .help("Aufteilung nach Kategorie oder Kostenentwicklung über die Zeit")
-                }   // EXPERIMENT Kacheln
+                }
             }
             // Zweite Zeile: was das gewählte Diagramm zeigt
-            if verlaufSichtbar {   // EXPERIMENT Kacheln: vorher zeigtVerlauf
+            if verlaufSichtbar {
                 HStack(spacing: 8) {
                     Text("Prognose").foregroundStyle(.secondary)
                     VerlaufZeitraumPicker()
@@ -641,7 +639,7 @@ struct UebersichtView: View {
             } else {
                 KostenUmschalter(ansicht: ansichtBindung)
             }
-            if !verlaufSichtbar && ansicht == .zeitraum {   // EXPERIMENT Kacheln: vorher !zeigtVerlauf
+            if !verlaufSichtbar && ansicht == .zeitraum {
                 HStack(spacing: 12) {
                     if vorgabe == .eigener {
                         DatePicker("Von", selection: von, displayedComponents: .date)
@@ -1039,6 +1037,7 @@ struct UebersichtView: View {
                     in: RoundedRectangle(cornerRadius: 8))
         // Ein Klick irgendwo in die Zeile öffnet das Abo; Felder und Menüs darin reagieren weiter selbst
         .contentShape(Rectangle())
+        .auswahlBereich()
         .onTapGesture { klick(abo) }
         .contextMenu { AboMenue(abo: abo, oeffnen: { auswahl = abo }, loeschen: { loeschen(abo) }) }
     }

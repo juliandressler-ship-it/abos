@@ -8,8 +8,12 @@ import SwiftUI
 enum Fokus {
     private static var beobachter: Any?
     private static var tastenBeobachter: Any?
-    /// EXPERIMENT Kacheln: true, solange die Kachel-Übersicht zu sehen ist – dann gehören Pfeile, Return und ⌫ dem Raster
+    /// Solange die Kachel-Übersicht zu sehen ist, gehören Pfeile, Return und ⌫ dem Raster
     static var kachelnAktiv = false
+    /// Flächen, auf denen ein Klick die Auswahl nicht aufhebt (Kacheln, Tabellenzeilen, Auswahl-Summe), in Fensterkoordinaten
+    static var auswahlBereiche: [UUID: CGRect] = [:]
+    /// Hebt die Auswahl in der Übersicht auf; nil, solange es nichts aufzuheben gibt
+    static var auswahlAufheben: (() -> Void)?
 
     static func einrichten() {
         tastenEinrichten()
@@ -31,6 +35,17 @@ enum Fokus {
 
             if ereignis.type == .leftMouseDown, fenster.firstResponder is NSText, !istEingabe(ziel) {
                 fenster.makeFirstResponder(nil)
+            }
+
+            // Klick neben die markierten Abos (nicht auf Kachel, Zeile, Liste oder Auswahl-Summe): Auswahl aufheben
+            if ereignis.type == .leftMouseDown, let aufheben = auswahlAufheben,
+               !(fenster is NSPanel), fenster.attachedSheet == nil, fenster.sheetParent == nil,
+               !istInListe(ziel) {
+                let p = inhalt.convert(ereignis.locationInWindow, from: nil)
+                let oben = inhalt.isFlipped ? p : CGPoint(x: p.x, y: inhalt.bounds.height - p.y)
+                if !auswahlBereiche.values.contains(where: { $0.contains(oben) }) {
+                    DispatchQueue.main.async(execute: aufheben)
+                }
             }
             return ereignis
         }
@@ -58,7 +73,7 @@ enum Fokus {
     private static func tastenEinrichten() {
         guard tastenBeobachter == nil else { return }
         tastenBeobachter = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { ereignis in
-            // EXPERIMENT Kacheln: Return öffnet, ⌫ löscht, ⌘A wählt alle Kacheln
+            // Return öffnet, ⌫ löscht, ⌘A wählt alle Kacheln
             if kachelnAktiv, let taste = kachelTaste(ereignis) {
                 NotificationCenter.default.post(name: Taste.gedrueckt, object: taste)
                 return nil
@@ -74,7 +89,7 @@ enum Fokus {
             let umschalt = ereignis.modifierFlags.contains(.shift)
             guard let richtung,
                   ereignis.modifierFlags.intersection([.command, .option, .control]).isEmpty,
-                  !(umschalt && (richtung == .links || richtung == .rechts) && !kachelnAktiv), // EXPERIMENT Kacheln: && !kachelnAktiv
+                  !(umschalt && (richtung == .links || richtung == .rechts) && !kachelnAktiv),
                   let fenster = ereignis.window, !(fenster is NSPanel),
                   !String(describing: type(of: fenster)).contains("Popover") else { return ereignis }
             let fokus = fenster.firstResponder
@@ -105,7 +120,6 @@ enum Fokus {
         static let gedrueckt = Notification.Name("AbosPfeiltaste")
     }
 
-    // EXPERIMENT Kacheln (Anfang)
     enum Taste {
         case oeffnen, loeschen, alle
         static let gedrueckt = Notification.Name("AbosKachelTaste")
@@ -125,7 +139,6 @@ enum Fokus {
         default: return nil
         }
     }
-    // EXPERIMENT Kacheln (Ende)
 
     private static func istInListe(_ ansicht: NSView?) -> Bool {
         var v = ansicht
@@ -153,7 +166,7 @@ struct FensterAktionen {
     var neu: () -> Void
     var suchen: () -> Void
     var loeschen: (Abo) -> Void
-    /// EXPERIMENT Kacheln: mehrere markierte Abos auf einmal löschen
+    /// Mehrere markierte Abos auf einmal löschen
     var markiertAnzahl = 0
     var markiertLoeschen: () -> Void = {}
 }
@@ -178,8 +191,8 @@ struct AboBefehle: Commands {
     @AppStorage("zeitraumJahr") private var jahr = false
     @AppStorage("kostenZeitraum") private var zeitraumAktiv = false
     @AppStorage("uebersichtDiagramm") private var zeigtVerlauf = false
-    @AppStorage("seitenleisteSichtbar") private var seitenleisteSichtbar = true   // EXPERIMENT Kacheln
-    @AppStorage("uebersichtLayout") private var layout: UebersichtLayout = .diagramme   // EXPERIMENT Kacheln
+    @AppStorage("seitenleisteSichtbar") private var seitenleisteSichtbar = true
+    @AppStorage("uebersichtLayout") private var layout: UebersichtLayout = .diagramme
 
     private var kosten: Binding<KostenAnsicht> {
         Binding(get: { zeitraumAktiv ? .zeitraum : (jahr ? .jahr : .monat) },
@@ -221,7 +234,6 @@ struct AboBefehle: Commands {
 
         // Darstellung
         CommandGroup(before: .toolbar) {
-            // EXPERIMENT Kacheln (Anfang)
             Button(seitenleisteSichtbar ? "Seitenleiste ausblenden" : "Seitenleiste einblenden") {
                 withAnimation(.easeOut(duration: 0.2)) { seitenleisteSichtbar.toggle() }
             }
@@ -232,7 +244,6 @@ struct AboBefehle: Commands {
             }
             .pickerStyle(.inline)
             Divider()
-            // EXPERIMENT Kacheln (Ende)
             Picker("Übersicht zeigt", selection: $status) {
                 ForEach(UebersichtStatus.allCases) { Text($0.menuTitel).tag($0) }
             }
@@ -276,7 +287,7 @@ struct AboBefehle: Commands {
             }
             .disabled(abo.flatMap { Format.url($0.websiteLink) } == nil)
             Divider()
-            // EXPERIMENT Kacheln: ohne geöffnetes Abo löscht ⌘⌫ alle markierten
+            // Ohne geöffnetes Abo löscht ⌘⌫ alle markierten
             if abo == nil, let n = aktionen?.markiertAnzahl, n > 1 {
                 Button("\(n) Abos löschen…") { aktionen?.markiertLoeschen() }
                     .keyboardShortcut(.delete, modifiers: .command)
