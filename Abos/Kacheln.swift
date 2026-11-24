@@ -184,6 +184,16 @@ struct AboKachel: View {
                         .font(.caption)
                         .foregroundStyle(.tertiary)
                         .lineLimit(1)
+                    // Geplanter Tarifwechsel: neuer Preis ab Datum
+                    if let plan = abo.geplanterWechsel, let neu = abo.geplantProMonat {
+                        // Gleiche Einheit wie der Preis darüber (Monat, Jahr …): über das Verhältnis zum Monatswert
+                        let faktor = (wert != nil && (abo.proMonat ?? 0) > 0) ? wert! / abo.proMonat! : 1
+                        Label("ab \(Format.datumKurz(plan.datum)): \(Format.euro(neu * faktor))", systemImage: "calendar.badge.clock")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                            .help("Geplanter Wechsel zu \(plan.tarif ?? "") ab \(Format.datum(plan.datum))")
+                    }
                 }
             }
             Spacer(minLength: 12)

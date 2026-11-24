@@ -142,6 +142,19 @@ extension Abo {
     func kosten(von start: Date, bis ende: Date) -> Double? {
         guard betrag != nil else { return nil }
         return zahltage(von: start, bis: ende).compactMap(anteil(am:)).reduce(0, +)
+            + einmalzahlungen(von: start, bis: ende).map(\.betrag).reduce(0, +)
+    }
+
+    /// Zusätzliche Zahlungen bei einem Tarifwechsel (eigener Anteil), Tage einschließlich
+    func einmalzahlungen(von start: Date, bis ende: Date) -> [(tag: Date, betrag: Double)] {
+        let cal = Kalender.de
+        let a = cal.startOfDay(for: start), b = cal.startOfDay(for: ende)
+        return verlauf.compactMap { e in
+            guard e.art == .tarif, e.geplant != true, let z = e.zahlung else { return nil }
+            let tag = cal.startOfDay(for: e.datum)
+            guard tag >= a && tag <= b else { return nil }
+            return (tag, z * max(0, anteilProzent) / 100)
+        }
     }
 
     /// Eigener Anteil an der Zahlung an einem Tag – mit dem Preis, der damals galt

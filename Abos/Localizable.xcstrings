@@ -865,6 +865,22 @@
         }
       }
     },
+    "Ab %@: %@ · %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ab %1$@: %2$@ · %3$@"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "From %@: %@ · %@"
+          }
+        }
+      }
+    },
     "Ab Verlängerung": {
       "localizations": {
         "de": {
@@ -1377,6 +1393,22 @@
         }
       }
     },
+    "An dem Tag bezahlt": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "An dem Tag bezahlt"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Paid on that day"
+          }
+        }
+      }
+    },
     "Angelegt": {
       "localizations": {
         "de": {
@@ -1745,6 +1777,22 @@
         }
       }
     },
+    "Bei einem geplanten Wechsel gelten einfach die regulären Zahlungen": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bei einem geplanten Wechsel gelten einfach die regulären Zahlungen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "For a planned change, the regular payments simply apply"
+          }
+        }
+      }
+    },
     "Berechtigung": {
       "localizations": {
         "de": {
@@ -1773,6 +1821,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Amount"
+          }
+        }
+      }
+    },
+    "Bezahlt": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bezahlt"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Paid"
           }
         }
       }
@@ -2931,6 +2995,38 @@
         }
       }
     },
+    "Geplanter Tarifwechsel – ändern oder aufheben unter „Kosten“": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Geplanter Tarifwechsel – ändern oder aufheben unter „Kosten“"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Planned plan change – change or cancel under “Costs”"
+          }
+        }
+      }
+    },
+    "Geplanter Wechsel zu %@ ab %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Geplanter Wechsel zu %1$@ ab %2$@"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Planned change to %@ from %@"
+          }
+        }
+      }
+    },
     "Gesamt": {
       "localizations": {
         "de": {
@@ -3024,6 +3120,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Today"
+          }
+        }
+      }
+    },
+    "Heute schon bezahlt": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Heute schon bezahlt"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Already paid today"
           }
         }
       }
@@ -6377,6 +6489,22 @@
         }
       }
     },
+    "Zählt diese Zahlung zusätzlich zu den regulären Zahlungen mit": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zählt diese Zahlung zusätzlich zu den regulären Zahlungen mit"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Counts this payment in addition to the regular payments"
+          }
+        }
+      }
+    },
     "ab %@": {
       "localizations": {
         "de": {
@@ -6389,6 +6517,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "from %@"
+          }
+        }
+      }
+    },
+    "ab %@: %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ab %1$@: %2$@"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "from %@: %@"
           }
         }
       }
@@ -6601,6 +6745,22 @@
         }
       }
     },
+    "bezahlt %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "bezahlt %@"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "paid %@"
+          }
+        }
+      }
+    },
     "bis": {
       "localizations": {
         "de": {
@@ -6638,7 +6798,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Verlauf"
+            "value": "Entwicklung"
           }
         },
         "en": {

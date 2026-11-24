@@ -283,7 +283,7 @@ extension Abo {
     /// Liegt `datum` nach heute, wird der Wechsel nur geplant: bis dahin bleiben Tarif, Preis und Name,
     /// am Tag selbst stellt `geplanteWechselAnwenden()` um. Ein neuer Plan ersetzt einen älteren.
     func tarifWechseln(von alt: String, zu neu: String, betrag neuerBetrag: Double?, ab datum: Date,
-                       neuerName: String? = nil, quelle: VerlaufEintrag.Quelle = .app) {
+                       neuerName: String? = nil, bezahlt: Double? = nil, quelle: VerlaufEintrag.Quelle = .app) {
         let cal = Kalender.de
         let alt = alt.trimmingCharacters(in: .whitespaces)
         let neu = neu.trimmingCharacters(in: .whitespaces)
@@ -301,12 +301,18 @@ extension Abo {
         protokollieren(VerlaufEintrag(datum: geplant ? cal.startOfDay(for: datum) : datum, art: .tarif, quelle: quelle,
                                       betrag: neuerBetrag, alterBetrag: alterBetrag, intervall: intervallRaw,
                                       tarif: neu, alterTarif: alt.isEmpty ? nil : alt,
-                                      geplant: geplant ? true : nil, neuerName: geplant ? neuerName : nil))
+                                      geplant: geplant ? true : nil, neuerName: geplant ? neuerName : nil,
+                                      zahlung: geplant ? nil : bezahlt))
     }
 
     /// Der geplante Tarifwechsel, falls es einen gibt
     var geplanterWechsel: VerlaufEintrag? {
         verlauf.first { $0.art == .tarif && $0.geplant == true }
+    }
+
+    /// Eigene Kosten pro Monat nach dem geplanten Wechsel
+    var geplantProMonat: Double? {
+        geplanterWechsel?.betrag.map { $0 * max(0, anteilProzent) / 100 / Double(monateProIntervall) }
     }
 
     /// Geplanten Wechsel verwerfen
@@ -550,6 +556,8 @@ struct VerlaufEintrag: Codable, Identifiable, Hashable {
     var geplant: Bool? = nil
     /// Geplanter Wechsel: Name, den das Abo ab dann tragen soll
     var neuerName: String? = nil
+    /// Beim Wechsel sofort bezahlter Betrag (z. B. Upgrade mit Zahlung am selben Tag), zusätzlich zu den regulären Zahlungen
+    var zahlung: Double? = nil
 
     /// Bei einem Tarifwechsel: true = teurer (Upgrade), false = günstiger (Downgrade), nil = gleich oder unbekannt
     var istUpgrade: Bool? {
@@ -625,6 +633,11 @@ enum Format {
         let bis = cal.date(from: DateComponents(year: 2200, month: 12, day: 31)) ?? .distantFuture
         return von...bis
     }()
+
+    /// „24.12.“ – Tag und Monat ohne Jahr, für knappe Hinweise
+    static func datumKurz(_ datum: Date) -> String {
+        datum.formatted(.dateTime.day(.twoDigits).month(.twoDigits).locale(locale))
+    }
 
     static func datum(_ datum: Date?) -> String {
         guard let datum else { return "–" }

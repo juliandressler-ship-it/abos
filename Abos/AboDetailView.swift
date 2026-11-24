@@ -86,6 +86,15 @@ struct AboDetailView: View {
                     .focused($nameFokus)
                 HStack(spacing: 8) {
                     KategorieMenue(abo: abo, alle: alle)
+                    if let plan = abo.geplanterWechsel {
+                        Label("Ab \(Format.datum(plan.datum)): \(plan.tarif ?? "") · \(Format.euro(plan.betrag))", systemImage: "calendar.badge.clock")
+                            .font(.caption.weight(.medium))
+                            .foregroundStyle(.secondary)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(Color.primary.opacity(0.08), in: RoundedRectangle(cornerRadius: 4))
+                            .help("Geplanter Tarifwechsel – ändern oder aufheben unter „Kosten“")
+                    }
                     if !abo.istAktiv {
                         Text(abo.gekuendigtAm.map { String(localized: "Gekündigt am \(Format.datum($0))") } ?? String(localized: "Gekündigt"))
                             .font(.caption.weight(.medium))
@@ -153,9 +162,11 @@ struct AboDetailView: View {
 
     private var kennzahlen: some View {
         HStack(alignment: .top, spacing: 0) {
-            kennzahl(abo.istAktiv ? String(localized: "Pro Monat") : String(localized: "Gespart pro Monat"), Format.euro(abo.proMonat))
+            kennzahl(abo.istAktiv ? String(localized: "Pro Monat") : String(localized: "Gespart pro Monat"), Format.euro(abo.proMonat),
+                     geplant: abo.geplantProMonat)
             trenner
-            kennzahl(abo.istAktiv ? String(localized: "Pro Jahr") : String(localized: "Gespart pro Jahr"), Format.euro(abo.proJahr))
+            kennzahl(abo.istAktiv ? String(localized: "Pro Jahr") : String(localized: "Gespart pro Jahr"), Format.euro(abo.proJahr),
+                     geplant: abo.geplantProMonat.map { $0 * 12 })
             trenner
             fristKennzahl
         }
@@ -165,13 +176,20 @@ struct AboDetailView: View {
         Rectangle().fill(Color.primary.opacity(0.08)).frame(width: 1, height: 44).padding(.horizontal, 16)
     }
 
-    private func kennzahl(_ titel: String, _ wert: String) -> some View {
+    /// `geplant`: Wert nach einem geplanten Tarifwechsel – steht klein darunter
+    private func kennzahl(_ titel: String, _ wert: String, geplant: Double? = nil) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(titel).font(.caption).foregroundStyle(.secondary)
             Text(wert)
                 .font(.system(size: 18, weight: .medium))
                 .monospacedDigit()
                 .foregroundStyle(abo.betrag == nil ? .secondary : .primary)
+            if abo.istAktiv, let geplant, let plan = abo.geplanterWechsel {
+                Text("ab \(Format.datumKurz(plan.datum)): \(Format.euro(geplant))")
+                    .font(.caption)
+                    .monospacedDigit()
+                    .foregroundStyle(.secondary)
+            }
         }
         .frame(minWidth: 110, alignment: .leading)
     }
@@ -226,7 +244,7 @@ struct AboDetailView: View {
 
     /// Öffnet den Kündigungsverlauf: wann gekündigt, wann wieder aktiviert
     private var verlaufKnopf: some View {
-        let anzahl = abo.verlauf.filter { $0.art != .angelegt }.count
+        let anzahl = abo.verlauf.count
         return Button {
             verlaufOffen.toggle()
         } label: {
@@ -1045,7 +1063,8 @@ struct VerlaufZeile: View {
             let tarife = [eintrag.alterTarif, eintrag.tarif].compactMap { $0 }.joined(separator: " → ")
             let neu = Format.euro(eintrag.betrag)
             let preise = eintrag.alterBetrag.map { "\(Format.euro($0)) → \(neu)" } ?? neu
-            return [tarife, preise + (intervall.map { " \($0)" } ?? "")].filter { !$0.isEmpty }.joined(separator: " · ")
+            let zahlung = eintrag.zahlung.map { "\n" + String(localized: "bezahlt \(Format.euro($0))") } ?? ""
+            return [tarife, preise + (intervall.map { " \($0)" } ?? "")].filter { !$0.isEmpty }.joined(separator: " · ") + zahlung
         }
         if eintrag.art == .preis {
             let neu = Format.euro(eintrag.betrag)

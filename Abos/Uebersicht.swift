@@ -622,7 +622,7 @@ struct UebersichtView: View {
                 if layout == .diagramme {
                 Picker("Diagramm", selection: $zeigtVerlauf) {
                     Label("Aufteilung", systemImage: "chart.pie").tag(false)
-                    Label(String(localized: "diagramm.verlauf", defaultValue: "Verlauf"), systemImage: "chart.line.uptrend.xyaxis").tag(true)
+                    Label(String(localized: "diagramm.verlauf", defaultValue: "Entwicklung"), systemImage: "chart.line.uptrend.xyaxis").tag(true)
                 }
                 .pickerStyle(.segmented)
                 .labelsHidden()

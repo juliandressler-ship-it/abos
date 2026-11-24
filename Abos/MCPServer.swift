@@ -174,7 +174,8 @@ final class MCPServer {
             let preis = a.keys.contains("betrag") ? zahl(a["betrag"]).map { max(0, $0) } : abo.betrag
             abo.tarifWechseln(von: bisherigerTarif, zu: neu, betrag: preis,
                               ab: Kalender.de.isDateInToday(tarifAb) ? Date() : tarifAb,
-                              neuerName: tarifGeplant ? (a["neuer_name"] as? String) : nil, quelle: .claude)
+                              neuerName: tarifGeplant ? (a["neuer_name"] as? String) : nil,
+                              bezahlt: zahl(a["tarif_bezahlt"]).map { max(0, $0) }, quelle: .claude)
         } else if a.keys.contains("betrag") {
             if a["betrag"] is NSNull { abo.betragAendern(nil, quelle: .claude) }
             else if let v = zahl(a["betrag"]) { abo.betragAendern(max(0, v), quelle: .claude) }
@@ -267,7 +268,10 @@ final class MCPServer {
              "betrag": e.betrag.map(runden) ?? NSNull(),
              "alter_betrag": e.alterBetrag.map(runden) ?? NSNull(),
              "tarif": e.tarif ?? NSNull(), "alter_tarif": e.alterTarif ?? NSNull(),
-             "geplant": e.geplant ?? false]
+             "geplant": e.geplant ?? false,
+             "bezahlt_beim_wechsel": e.zahlung.map(runden) ?? NSNull(),
+             // Tag, ab dem ein Tarifwechsel gilt (lokales Datum, eindeutiger als der UTC-Zeitstempel)
+             "gilt_ab": e.art == .tarif ? (iso(e.datum) ?? NSNull()) : NSNull()]
         }
         return d
     }
@@ -388,6 +392,8 @@ final class MCPServer {
         aendern["neuer_name"] = ["type": "string", "description": "Umbenennen"]
         aendern["tarif_wechseln"] = ["type": "string",
                                      "description": "Upgrade/Downgrade auf diesen Tarif (z. B. Max). Neuen Preis in betrag mitgeben. Wird im Verlauf als Tarifwechsel festgehalten."]
+        aendern["tarif_bezahlt"] = ["type": "number",
+                                    "description": "Nur mit tarif_wechseln: am Wechseltag zusätzlich bezahlter Betrag in Euro (z. B. sofort fällige Zahlung beim Upgrade); zählt zu den Ausgaben"]
         aendern["tarif_ab"] = ["type": "string", "description": "Nur mit tarif_wechseln: ab wann, JJJJ-MM-TT (Standard heute). In der Zukunft = geplanter Wechsel, z. B. Downgrade zum Ende der Laufzeit; bis dahin bleiben Tarif, Preis und Name."]
         let lesen: [String: Any] = ["readOnlyHint": true, "destructiveHint": false]
         return [

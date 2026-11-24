@@ -381,6 +381,12 @@ struct AboZeile: View {
                     .background(farbe.opacity(0.14), in: RoundedRectangle(cornerRadius: 4))
                     .help("Kündigungsfrist \(Format.inTagen(tage))")
             }
+            if let plan = abo.geplanterWechsel {
+                Image(systemName: "calendar.badge.clock")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .help("Ab \(Format.datum(plan.datum)): \(plan.tarif ?? "") · \(Format.euro(plan.betrag))")
+            }
             Text(Format.euro(abo.proMonat))
                 .monospacedDigit()
                 .foregroundStyle(abo.betrag == nil || !abo.istAktiv ? .secondary : .primary)
@@ -685,8 +691,13 @@ struct DashboardView: View {
                     }
                 }
                 .padding(.horizontal, -8)
+                .padding(.bottom, 8)
             }
-            .scrollIndicators(.never)
+            .scrollIndicators(.automatic)
+            // Weitere Kategorien unten sanft andeuten
+            .mask(LinearGradient(stops: [.init(color: .black, location: 0), .init(color: .black, location: 0.85),
+                                         .init(color: .black.opacity(0.25), location: 1)],
+                                 startPoint: .top, endPoint: .bottom))
         }
     }
 }

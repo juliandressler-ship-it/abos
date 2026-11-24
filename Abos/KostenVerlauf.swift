@@ -43,6 +43,9 @@ enum Verlauf {
             for tag in abo.zahltage(von: start, bis: letzterTag) {
                 proMonat[monatsAnfang(tag), default: 0] += abo.anteil(am: tag) ?? 0
             }
+            for z in abo.einmalzahlungen(von: start, bis: letzterTag) {
+                proMonat[monatsAnfang(z.tag), default: 0] += z.betrag
+            }
         }
 
         var punkte: [VerlaufPunkt] = []
@@ -387,7 +390,7 @@ struct VerlaufDiagramm: View {
                 .font(.caption2)
                 .foregroundStyle(.secondary)
                 .fixedSize()
-                .position(x: x + 16, y: f.minY - 7)
+                .position(x: min(x + 16, f.maxX - 16), y: f.minY - 7)
         }
     }
 

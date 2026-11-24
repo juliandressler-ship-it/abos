@@ -13,6 +13,9 @@ struct TarifWechselBlatt: View {
     @State private var preis: Double?
     @State private var ab = Date()
     @State private var nameAnpassen = true
+    /// Beim Wechsel sofort bezahlt (z. B. Upgrade mit Zahlung am selben Tag)
+    @State private var bezahlt = false
+    @State private var zahlung: Double?
     @FocusState private var neuFokus: Bool
 
     init(abo: Abo) {
@@ -82,6 +85,13 @@ struct TarifWechselBlatt: View {
                             .labelsHidden()
                             .frame(width: 140)
                             .focused($neuFokus)
+                            .onChange(of: neu) { _, wert in
+                                // Bekannter früherer Tarif: dessen Preis vorschlagen
+                                let name = wert.trimmingCharacters(in: .whitespaces)
+                                if preis == nil, let t = abo.fruehereTarife.first(where: { $0.name.caseInsensitiveCompare(name) == .orderedSame }) {
+                                    preis = t.betrag
+                                }
+                            }
                         if !abo.fruehereTarife.isEmpty {
                             Menu("Früherer Tarif") {
                                 ForEach(abo.fruehereTarife, id: \.name) { t in
@@ -123,17 +133,40 @@ struct TarifWechselBlatt: View {
                         }
                     }
                 }
-                if let vorschlag = namensVorschlag {
-                    GridRow {
-                        Text("Name").foregroundStyle(.secondary)
+                GridRow {
+                        Text("Zahlung").foregroundStyle(.secondary)
+                        HStack(spacing: 8) {
+                            Toggle(Kalender.de.isDateInToday(ab) ? String(localized: "Heute schon bezahlt")
+                                                                 : String(localized: "An dem Tag bezahlt"), isOn: $bezahlt)
+                                .help(istGeplant ? String(localized: "Bei einem geplanten Wechsel gelten einfach die regulären Zahlungen")
+                                                 : String(localized: "Zählt diese Zahlung zusätzlich zu den regulären Zahlungen mit"))
+                                .disabled(istGeplant)
+                            if bezahlt && !istGeplant {
+                                TextField("Bezahlt", value: $zahlung,
+                                          format: .number.precision(.fractionLength(2)).locale(Format.locale),
+                                          prompt: Text("0,00"))
+                                    .labelsHidden()
+                                    .multilineTextAlignment(.trailing)
+                                    .frame(width: 80)
+                                Text("€")
+                            }
+                        }
+                        .onChange(of: bezahlt) { _, an in if an && zahlung == nil { zahlung = preis } }
+                }
+                GridRow {
+                    Text("Name").foregroundStyle(.secondary)
+                    if let vorschlag = namensVorschlag {
                         Toggle(istGeplant ? String(localized: "Ab dann „\(vorschlag)“ heißen")
                                           : String(localized: "In „\(vorschlag)“ umbenennen"), isOn: $nameAnpassen)
+                    } else {
+                        Text(abo.name.isEmpty ? String(localized: "Ohne Namen") : abo.name)
+                            .foregroundStyle(.secondary)
                     }
                 }
             }
 
             zusammenfassung
-                .frame(minHeight: 20, alignment: .leading)
+                .frame(minHeight: 40, alignment: .topLeading)
 
             HStack {
                 Spacer()
@@ -192,7 +225,8 @@ struct TarifWechselBlatt: View {
         // Heute: jetziger Zeitpunkt, damit der Eintrag nach allem steht, was heute schon passiert ist
         let zeitpunkt = cal.isDateInToday(ab) ? Date() : cal.startOfDay(for: ab)
         let neuerName = nameAnpassen ? namensVorschlag : nil
-        abo.tarifWechseln(von: bisher, zu: neuBereinigt, betrag: preis, ab: zeitpunkt, neuerName: neuerName)
+        abo.tarifWechseln(von: bisher, zu: neuBereinigt, betrag: preis, ab: zeitpunkt, neuerName: neuerName,
+                          bezahlt: (bezahlt && !istGeplant) ? zahlung : nil)
         dismiss()
     }
 }
