@@ -168,7 +168,8 @@ extension Abo {
             k = 0
         } else {
             guard autoVerlaengerung else { return nil }
-            anker = startdatum
+            // Hat ein Wechsel die Abrechnung neu gestartet, verlängert sich das Abo ab diesem Tag
+            anker = letzterAbrechnungsbeginn ?? startdatum
             k = 1
         }
 
@@ -303,6 +304,12 @@ extension Abo {
                                       tarif: neu, alterTarif: alt.isEmpty ? nil : alt,
                                       geplant: geplant ? true : nil, neuerName: geplant ? neuerName : nil,
                                       zahlung: geplant ? nil : bezahlt))
+    }
+
+    /// Tag, an dem die Abrechnung zuletzt durch einen Tarifwechsel neu begonnen hat
+    var letzterAbrechnungsbeginn: Date? {
+        verlauf.filter { $0.art == .tarif && $0.neuerAbrechnungstag == true && $0.geplant != true }
+            .map { Kalender.de.startOfDay(for: $0.datum) }.max()
     }
 
     /// Der geplante Tarifwechsel, falls es einen gibt
@@ -558,6 +565,8 @@ struct VerlaufEintrag: Codable, Identifiable, Hashable {
     var neuerName: String? = nil
     /// Beim Wechsel sofort bezahlter Betrag (z. B. Upgrade mit Zahlung am selben Tag), zusätzlich zu den regulären Zahlungen
     var zahlung: Double? = nil
+    /// Nur bei „Tarif gewechselt“: Die Abrechnung beginnt an diesem Tag neu (neuer Abrechnungstag, Zahlung zum neuen Preis)
+    var neuerAbrechnungstag: Bool? = nil
 
     /// Bei einem Tarifwechsel: true = teurer (Upgrade), false = günstiger (Downgrade), nil = gleich oder unbekannt
     var istUpgrade: Bool? {

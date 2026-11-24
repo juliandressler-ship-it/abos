@@ -122,18 +122,28 @@ extension Abo {
         let grenze = min(ende, spaetestens)
         guard anfang <= grenze else { return [] }
         let schritt = monateProIntervall
-        var k = 0
-        if anfang < start {
-            let monate = cal.dateComponents([.month], from: anfang, to: start).month ?? 0
-            k = max(0, monate / schritt - 1)
-        }
+        // Abschnitte: ab „Abo seit“ und ab jedem Wechsel mit neuem Abrechnungstag zählt der Takt neu
+        let neuStarts = verlauf.filter { $0.art == .tarif && $0.neuerAbrechnungstag == true }
+            .map { cal.startOfDay(for: $0.datum) }.filter { $0 > anfang }.sorted()
+        let anker = [anfang] + neuStarts
         var tage: [Date] = []
-        var sicherung = 0
-        while sicherung < 5000, let tag = cal.date(byAdding: .month, value: k * schritt, to: anfang), tag <= grenze {
-            let laeuft = phasen.contains { tag >= $0.von && ($0.bis.map { tag <= $0 } ?? true) }
-            if tag >= start && laeuft { tage.append(tag) }
-            k += 1
-            sicherung += 1
+        for (i, a) in anker.enumerated() {
+            // Ein Abschnitt endet am Tag vor dem nächsten Neubeginn
+            let abschnittEnde = i + 1 < anker.count ? (cal.date(byAdding: .day, value: -1, to: anker[i + 1]) ?? anker[i + 1]) : grenze
+            let bis = min(grenze, abschnittEnde)
+            guard a <= bis else { continue }
+            var k = 0
+            if a < start {
+                let monate = cal.dateComponents([.month], from: a, to: start).month ?? 0
+                k = max(0, monate / schritt - 1)
+            }
+            var sicherung = 0
+            while sicherung < 5000, let tag = cal.date(byAdding: .month, value: k * schritt, to: a), tag <= bis {
+                let laeuft = phasen.contains { tag >= $0.von && ($0.bis.map { tag <= $0 } ?? true) }
+                if tag >= start && laeuft { tage.append(tag) }
+                k += 1
+                sicherung += 1
+            }
         }
         return tage
     }

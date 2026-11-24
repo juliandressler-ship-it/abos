@@ -1063,7 +1063,11 @@ struct VerlaufZeile: View {
             let tarife = [eintrag.alterTarif, eintrag.tarif].compactMap { $0 }.joined(separator: " → ")
             let neu = Format.euro(eintrag.betrag)
             let preise = eintrag.alterBetrag.map { "\(Format.euro($0)) → \(neu)" } ?? neu
-            let zahlung = eintrag.zahlung.map { "\n" + String(localized: "bezahlt \(Format.euro($0))") } ?? ""
+            var zahlung = eintrag.zahlung.map { "\n" + String(localized: "bezahlt \(Format.euro($0))") } ?? ""
+            if eintrag.neuerAbrechnungstag == true {
+                let tag = Kalender.de.component(.day, from: eintrag.datum)
+                zahlung += "\n" + String(localized: "Abrechnung ab hier jeweils am \(tag).")
+            }
             return [tarife, preise + (intervall.map { " \($0)" } ?? "")].filter { !$0.isEmpty }.joined(separator: " · ") + zahlung
         }
         if eintrag.art == .preis {

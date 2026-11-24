@@ -1121,6 +1121,22 @@
         }
       }
     },
+    "Abrechnung ab hier jeweils am %lld.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Abrechnung ab hier jeweils am %lld."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Billed on day %lld of each period from here on."
+          }
+        }
+      }
+    },
     "Aktiv": {
       "localizations": {
         "de": {

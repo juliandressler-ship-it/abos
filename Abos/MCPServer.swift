@@ -270,6 +270,7 @@ final class MCPServer {
              "tarif": e.tarif ?? NSNull(), "alter_tarif": e.alterTarif ?? NSNull(),
              "geplant": e.geplant ?? false,
              "bezahlt_beim_wechsel": e.zahlung.map(runden) ?? NSNull(),
+             "neuer_abrechnungstag": e.neuerAbrechnungstag ?? false,
              // Tag, ab dem ein Tarifwechsel gilt (lokales Datum, eindeutiger als der UTC-Zeitstempel)
              "gilt_ab": e.art == .tarif ? (iso(e.datum) ?? NSNull()) : NSNull()]
         }
