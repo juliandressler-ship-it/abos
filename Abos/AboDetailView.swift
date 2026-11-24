@@ -15,6 +15,7 @@ struct AboDetailView: View {
     @Environment(\.scenePhase) private var scenePhase
     @FocusState private var nameFokus: Bool
     @State private var verlaufOffen = false
+    @State private var tarifOffen = false
     @State private var eigeneFrist = false
     @State private var eigeneVerlaengerung = false
     @State private var mitteilungen: Mitteilungen.Zustand = .bleibt
@@ -33,12 +34,14 @@ struct AboDetailView: View {
         // Die Karte wird für ein anderes Abo wiederverwendet: kurzlebige Zustände zurücksetzen
         .onChange(of: abo.persistentModelID) { _, _ in
             verlaufOffen = false
+            tarifOffen = false
             eigeneFrist = false
             eigeneVerlaengerung = false
             if fokusName { nameFokus = true }
         }
         // Esc: erst eine laufende Eingabe beenden, beim nächsten Mal zurück zur Übersicht
         .onExitCommand { if !Fokus.beenden() { zurueck() } }
+        .sheet(isPresented: $tarifOffen) { TarifWechselBlatt(abo: abo) }
         .task { mitteilungen = await Mitteilungen.zustand() }
         .onChange(of: scenePhase) { _, neu in
             if neu == .active { Task { mitteilungen = await Mitteilungen.zustand() } }
@@ -239,7 +242,7 @@ struct AboDetailView: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .help("Verlauf: Kündigungen, Wiederaufnahmen und Preisänderungen")
+        .help("Verlauf: Kündigungen, Wiederaufnahmen, Preisänderungen und Tarifwechsel")
         .popover(isPresented: $verlaufOffen, arrowEdge: .bottom) {
             KuendigungsVerlauf(abo: abo)
         }
@@ -269,6 +272,14 @@ struct AboDetailView: View {
                 }
 
                 Abschnitt(String(localized: "Kosten")) {
+                    LabeledContent("Tarif") {
+                        HStack(spacing: 12) {
+                            Text(abo.tarif.isEmpty ? "–" : abo.tarif)
+                                .foregroundStyle(abo.tarif.isEmpty ? .tertiary : .primary)
+                            Button("Tarif wechseln…") { tarifOffen = true }
+                                .help("Upgrade oder Downgrade mit Datum und neuem Preis – bleibt im Verlauf sichtbar")
+                        }
+                    }
                     LabeledContent("Betrag") {
                         HStack(spacing: 4) {
                             TextField("Betrag", value: betragBindung,
@@ -927,7 +938,7 @@ struct VerlaufZeile: View {
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
             VStack(spacing: 0) {
-                Image(systemName: eintrag.art.symbol)
+                Image(systemName: eintrag.symbol)
                     .font(.system(size: 16, weight: .medium))
                     .foregroundStyle(eintrag.art == .gekuendigt ? Color.primary : Color.secondary)
                     .frame(width: 20, height: 20)
@@ -940,7 +951,7 @@ struct VerlaufZeile: View {
             }
             VStack(alignment: .leading, spacing: 4) {
                 HStack(alignment: .firstTextBaseline) {
-                    Text(eintrag.art.titel).fontWeight(.medium)
+                    Text(eintrag.titel).fontWeight(.medium)
                     Spacer()
                     if modus == .normal {
                         Menu {
@@ -1009,6 +1020,13 @@ struct VerlaufZeile: View {
 
     private var detail: String? {
         let intervall = eintrag.intervall.flatMap(Intervall.init(rawValue:))?.titel.lowercased()
+        if eintrag.art == .tarif {
+            // „Pro → Max · 21,42 € → 101,84 € monatlich“
+            let tarife = [eintrag.alterTarif, eintrag.tarif].compactMap { $0 }.joined(separator: " → ")
+            let neu = Format.euro(eintrag.betrag)
+            let preise = eintrag.alterBetrag.map { "\(Format.euro($0)) → \(neu)" } ?? neu
+            return [tarife, preise + (intervall.map { " \($0)" } ?? "")].filter { !$0.isEmpty }.joined(separator: " · ")
+        }
         if eintrag.art == .preis {
             let neu = Format.euro(eintrag.betrag)
             let text = eintrag.alterBetrag.map { "\(Format.euro($0)) → \(neu)" } ?? String(localized: "neu \(neu)")

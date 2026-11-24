@@ -3,6 +3,15 @@ import SwiftUI
 // MARK: - Daten
 
 /// Ein Monat im Kostenverlauf
+/// Markierung im Diagramm, z. B. ein Tarifwechsel
+struct DiagrammEreignis: Identifiable {
+    let datum: Date
+    let text: String
+    /// true = Upgrade, false = Downgrade, nil = neutral
+    let hoch: Bool?
+    var id: Date { datum }
+}
+
 struct VerlaufPunkt: Identifiable {
     let monat: Date
     /// Zahlungen in diesem Monat
@@ -150,8 +159,17 @@ struct KostenVerlauf: View {
             } else {
                 if zeigtSummen { summen(punkte) }
                 // Eigene Ansicht: Mausbewegungen zeichnen nur das Diagramm neu, gerechnet wird nicht noch einmal
-                VerlaufDiagramm(punkte: Verlauf.ausgeduennt(punkte), hoehe: hoehe)
+                VerlaufDiagramm(punkte: Verlauf.ausgeduennt(punkte), hoehe: hoehe, ereignisse: ereignisse)
             }
+        }
+    }
+
+    /// Tarifwechsel eines einzelnen Abos als Markierungen
+    private var ereignisse: [DiagrammEreignis] {
+        guard abos.count == 1, let abo = abos.first else { return [] }
+        return abo.verlauf.filter { $0.art == .tarif }.map { e in
+            let pfeil = e.istUpgrade.map { $0 ? "↑ " : "↓ " } ?? ""
+            return DiagrammEreignis(datum: e.datum, text: pfeil + (e.tarif ?? e.titel), hoch: e.istUpgrade)
         }
     }
 
@@ -186,6 +204,7 @@ struct KostenVerlauf: View {
 struct VerlaufDiagramm: View {
     let punkte: [VerlaufPunkt]
     let hoehe: CGFloat
+    var ereignisse: [DiagrammEreignis] = []
     @State private var gewaehlt: Int?
 
     // Ränder für die Achsenbeschriftung
@@ -203,6 +222,7 @@ struct VerlaufDiagramm: View {
                 gitter(skala, lage, flaeche)
                 linien(skala, lage, flaeche)
                 heuteLinie(skala, lage, flaeche)
+                ereignisLinien(skala, lage, flaeche)
                 if let i = gewaehlt, punkte.indices.contains(i) {
                     markierung(i, lage, flaeche, breite: geo.size.width)
                 }
@@ -368,6 +388,26 @@ struct VerlaufDiagramm: View {
                 .foregroundStyle(.secondary)
                 .fixedSize()
                 .position(x: x + 16, y: f.minY - 7)
+        }
+    }
+
+    /// Tarifwechsel: gestrichelte Linie mit kurzer Beschriftung („↑ Max“) am oberen Rand
+    private func ereignisLinien(_ skala: Skala, _ lage: Lage, _ f: CGRect) -> some View {
+        ZStack(alignment: .topLeading) {
+            ForEach(ereignisse.filter { $0.datum >= skala.start && $0.datum <= skala.ende }) { e in
+                let x = lage.x(e.datum)
+                let farbe: Color = e.hoch == true ? .orange : e.hoch == false ? .green : .secondary
+                Path { p in
+                    p.move(to: CGPoint(x: x, y: f.minY + 8))
+                    p.addLine(to: CGPoint(x: x, y: f.maxY))
+                }
+                .stroke(farbe.opacity(0.7), style: StrokeStyle(lineWidth: 1, dash: [3, 3]))
+                Text(e.text)
+                    .font(.caption2.weight(.medium))
+                    .foregroundStyle(farbe)
+                    .fixedSize()
+                    .position(x: x, y: f.minY + 2)
+            }
         }
     }
 

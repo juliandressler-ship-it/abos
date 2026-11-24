@@ -113,6 +113,22 @@
         }
       }
     },
+    " · %@%@ %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": " · %1$@%2$@ %3$@"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": " · %@%@ %@"
+          }
+        }
+      }
+    },
     " – Vertragsnr. %@": {
       "localizations": {
         "de": {
@@ -141,6 +157,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "%"
+          }
+        }
+      }
+    },
+    "%@ %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ %2$@"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ %@"
           }
         }
       }
@@ -765,6 +797,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "; renews on %@"
+          }
+        }
+      }
+    },
+    "Ab": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ab"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "From"
           }
         }
       }
@@ -1681,6 +1729,22 @@
         }
       }
     },
+    "Bisher": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bisher"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Current"
+          }
+        }
+      }
+    },
     "Bisher ausgegeben": {
       "localizations": {
         "de": {
@@ -1890,6 +1954,22 @@
         }
       }
     },
+    "Der Wechsel steht danach mit Datum im Verlauf, der Kostenverlauf rechnet ab dann mit dem neuen Preis.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Der Wechsel steht danach mit Datum im Verlauf, der Kostenverlauf rechnet ab dann mit dem neuen Preis."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The change is recorded with its date in the history; the cost chart uses the new price from then on."
+          }
+        }
+      }
+    },
     "Der aktuelle Betrag des Abos bleibt unverändert": {
       "localizations": {
         "de": {
@@ -2078,6 +2158,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Double-click to open the subscription"
+          }
+        }
+      }
+    },
+    "Downgrade": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Downgrade"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Downgrade"
           }
         }
       }
@@ -2562,6 +2658,22 @@
         }
       }
     },
+    "Früherer Tarif": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Früherer Tarif"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Previous plan"
+          }
+        }
+      }
+    },
     "Für „%@“": {
       "localizations": {
         "de": {
@@ -2991,6 +3103,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "This month"
+          }
+        }
+      }
+    },
+    "In „%@“ umbenennen": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In „%@“ umbenennen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rename to “%@”"
           }
         }
       }
@@ -4035,6 +4163,22 @@
         }
       }
     },
+    "Neu": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Neu"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New"
+          }
+        }
+      }
+    },
     "Neue Kategorie": {
       "localizations": {
         "de": {
@@ -4079,6 +4223,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "New amount"
+          }
+        }
+      }
+    },
+    "Neuer Preis": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Neuer Preis"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New price"
           }
         }
       }
@@ -5156,6 +5316,70 @@
         }
       }
     },
+    "Tarif": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tarif"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Plan"
+          }
+        }
+      }
+    },
+    "Tarif gewechselt": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tarif gewechselt"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Plan changed"
+          }
+        }
+      }
+    },
+    "Tarif wechseln": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tarif wechseln"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Change plan"
+          }
+        }
+      }
+    },
+    "Tarif wechseln…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tarif wechseln…"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Change Plan…"
+          }
+        }
+      }
+    },
     "Telefon": {
       "localizations": {
         "de": {
@@ -5284,6 +5508,38 @@
         }
       }
     },
+    "Upgrade": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Upgrade"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Upgrade"
+          }
+        }
+      }
+    },
+    "Upgrade oder Downgrade mit Datum und neuem Preis – bleibt im Verlauf sichtbar": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Upgrade oder Downgrade mit Datum und neuem Preis – bleibt im Verlauf sichtbar"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Upgrade or downgrade with date and new price – stays visible in the history"
+          }
+        }
+      }
+    },
     "Vergrößern: alle gekündigten Abos mit Details": {
       "localizations": {
         "de": {
@@ -5381,6 +5637,7 @@
       }
     },
     "Verlauf: Kündigungen, Wiederaufnahmen und Preisänderungen": {
+      "extractionState": "stale",
       "localizations": {
         "de": {
           "stringUnit": {
@@ -5392,6 +5649,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "History: cancellations, reactivations and price changes"
+          }
+        }
+      }
+    },
+    "Verlauf: Kündigungen, Wiederaufnahmen, Preisänderungen und Tarifwechsel": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verlauf: Kündigungen, Wiederaufnahmen, Preisänderungen und Tarifwechsel"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "History: cancellations, reactivations, price changes and plan changes"
           }
         }
       }
@@ -5552,6 +5825,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Open Website"
+          }
+        }
+      }
+    },
+    "Wechseln": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wechseln"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Change"
           }
         }
       }
@@ -6976,6 +7265,38 @@
           "stringUnit": {
             "state": "translated",
             "value": "e.g. Fitness"
+          }
+        }
+      }
+    },
+    "z. B. Max": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "z. B. Max"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "e.g. Max"
+          }
+        }
+      }
+    },
+    "z. B. Pro": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "z. B. Pro"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "e.g. Pro"
           }
         }
       }

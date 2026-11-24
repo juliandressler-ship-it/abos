@@ -62,6 +62,8 @@ final class Abo {
     var telefon: String = ""
     /// Kunden- oder Vertragsnummer (keine Zugangsdaten)
     var vertragsnummer: String = ""
+    /// Aktueller Tarif, z. B. „Pro“ oder „Max“; leer = keiner angegeben
+    var tarif: String = ""
     /// Erinnerung: -2 = Standard aus den Einstellungen, -1 = keine, sonst Tage vor der Frist (0 = am Tag)
     var erinnerungTage: Int = -2
     /// Kündigungsverlauf als JSON (Liste von VerlaufEintrag); als Text gespeichert, damit die Migration simpel bleibt
@@ -264,12 +266,57 @@ extension Abo {
 
     /// Betrag pro Zahlung, der an einem Tag galt (aus den Preisänderungen im Verlauf)
     func betrag(am tag: Date) -> Double? {
-        let aenderungen = verlauf.filter { $0.art == .preis }.sorted { $0.datum < $1.datum }
+        let aenderungen = verlauf.filter { $0.art == .preis || $0.art == .tarif }.sorted { $0.datum < $1.datum }
         // Die erste Änderung nach dem Tag verrät, was vorher galt
         if let naechste = aenderungen.first(where: { $0.datum > tag }) {
             return naechste.alterBetrag ?? betrag
         }
         return betrag
+    }
+
+    /// Tarif wechseln (Upgrade oder Downgrade): neuer Tarif und Preis gelten ab `datum`,
+    /// der Verlauf hält fest, von welchem Tarif und Preis gewechselt wurde
+    func tarifWechseln(von alt: String, zu neu: String, betrag neuerBetrag: Double?, ab datum: Date,
+                       quelle: VerlaufEintrag.Quelle = .app) {
+        let alterBetrag = betrag(am: datum)
+        let alt = alt.trimmingCharacters(in: .whitespaces)
+        let neu = neu.trimmingCharacters(in: .whitespaces)
+        tarif = neu
+        betrag = neuerBetrag
+        protokollieren(VerlaufEintrag(datum: datum, art: .tarif, quelle: quelle, betrag: neuerBetrag,
+                                      alterBetrag: alterBetrag, intervall: intervallRaw,
+                                      tarif: neu, alterTarif: alt.isEmpty ? nil : alt))
+    }
+
+    /// Tarife, die das Abo schon hatte (ohne den aktuellen), jeweils mit dem zuletzt gültigen Preis –
+    /// zum schnellen Zurückwechseln
+    var fruehereTarife: [(name: String, betrag: Double?)] {
+        var preise: [String: Double?] = [:]
+        var reihenfolge: [String] = []
+        // Älteste zuerst, damit am Ende der jüngste Preis je Tarif übrig bleibt
+        for e in verlauf.reversed() where e.art == .tarif {
+            for (name, preis) in [(e.alterTarif, e.alterBetrag), (e.tarif, e.betrag)] {
+                guard let name, !name.isEmpty else { continue }
+                if preise[name] == nil { reihenfolge.append(name) }
+                preise[name] = preis
+            }
+        }
+        return reihenfolge.filter { $0.caseInsensitiveCompare(tarif) != .orderedSame }
+            .map { (name: $0, betrag: preise[$0] ?? nil) }
+    }
+
+    /// Übliche Tarifnamen – damit „Claude Pro“ beim ersten Wechsel „Pro“ als bisherigen Tarif vorschlägt
+    static let typischeTarife: Set<String> = ["pro", "plus", "max", "basic", "basis", "premium", "standard", "family",
+                                              "familie", "team", "free", "lite", "ultra", "individual", "duo",
+                                              "student", "starter", "business", "unlimited", "mini"]
+
+    /// Bisheriger Tarif für den Wechsel: der eingetragene, sonst ein typischer Tarifname am Ende des Namens
+    var vermuteterTarif: String {
+        if !tarif.isEmpty { return tarif }
+        let woerter = name.split(separator: " ")
+        guard woerter.count >= 2, let letztes = woerter.last,
+              Abo.typischeTarife.contains(letztes.lowercased()) else { return "" }
+        return String(letztes)
     }
 
     /// Ein fester Termin rollt bei automatischer Verlängerung um die Verlängerungsdauer weiter
@@ -392,7 +439,7 @@ extension Abo {
 
 struct VerlaufEintrag: Codable, Identifiable, Hashable {
     enum Art: String, Codable {
-        case angelegt, gekuendigt, reaktiviert, preis
+        case angelegt, gekuendigt, reaktiviert, preis, tarif
 
         var titel: String {
             switch self {
@@ -400,6 +447,7 @@ struct VerlaufEintrag: Codable, Identifiable, Hashable {
             case .gekuendigt: return String(localized: "Gekündigt")
             case .reaktiviert: return String(localized: "Wieder aktiviert")
             case .preis: return String(localized: "Preis geändert")
+            case .tarif: return String(localized: "Tarif gewechselt")
             }
         }
 
@@ -409,6 +457,7 @@ struct VerlaufEintrag: Codable, Identifiable, Hashable {
             case .gekuendigt: return "xmark.circle"
             case .reaktiviert: return "arrow.uturn.backward.circle"
             case .preis: return "eurosign.circle"
+            case .tarif: return "arrow.up.arrow.down.circle"
             }
         }
     }
@@ -439,6 +488,32 @@ struct VerlaufEintrag: Codable, Identifiable, Hashable {
     var alterBetrag: Double?
     /// Zahlungsintervall zu diesem Zeitpunkt (Rohwert von Intervall)
     var intervall: String?
+    /// Nur bei „Tarif gewechselt“: neuer und bisheriger Tarif
+    var tarif: String? = nil
+    var alterTarif: String? = nil
+
+    /// Bei einem Tarifwechsel: true = teurer (Upgrade), false = günstiger (Downgrade), nil = gleich oder unbekannt
+    var istUpgrade: Bool? {
+        guard art == .tarif, let neu = betrag, let alt = alterBetrag, abs(neu - alt) >= 0.005 else { return nil }
+        return neu > alt
+    }
+
+    /// Überschrift in der Zeitleiste
+    var titel: String {
+        switch istUpgrade {
+        case true?: return String(localized: "Upgrade")
+        case false?: return String(localized: "Downgrade")
+        case nil: return art.titel
+        }
+    }
+
+    var symbol: String {
+        switch istUpgrade {
+        case true?: return "arrow.up.circle"
+        case false?: return "arrow.down.circle"
+        case nil: return art.symbol
+        }
+    }
 
     static let encoder: JSONEncoder = {
         let e = JSONEncoder()

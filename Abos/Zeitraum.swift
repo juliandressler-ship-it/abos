@@ -90,7 +90,7 @@ extension Abo {
                 }
             case .reaktiviert:
                 if beginn == nil { beginn = cal.startOfDay(for: e.datum) }
-            case .angelegt, .preis:
+            case .angelegt, .preis, .tarif:
                 break
             }
         }

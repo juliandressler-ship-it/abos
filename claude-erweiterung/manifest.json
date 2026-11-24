@@ -23,7 +23,7 @@
     { "name": "abo_details", "description": "Alle Angaben zu einem Abo, inklusive Kündigungsverlauf" },
     { "name": "auswertung", "description": "Kosten nach Kategorie, teuerste Abos, anstehende Fristen und Ersparnis" },
     { "name": "abo_anlegen", "description": "Ein neues Abo oder eine neue Versicherung anlegen" },
-    { "name": "abo_aendern", "description": "Angaben eines Abos ändern, als gekündigt markieren oder reaktivieren" }
+    { "name": "abo_aendern", "description": "Angaben eines Abos ändern, Tarif wechseln, als gekündigt markieren oder reaktivieren" }
   ],
   "keywords": ["abos", "abonnements", "versicherungen", "kündigung", "finanzen"],
   "license": "MIT",

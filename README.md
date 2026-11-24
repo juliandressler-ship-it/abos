@@ -10,6 +10,7 @@ Alles bleibt auf deinem Mac. Kein Konto, keine Cloud, kein Netzwerk.
 - **Kacheln oder Diagramm:** die Übersicht wahlweise als Diagramm mit Tabelle oder als Raster aus Kacheln (Darstellung → Übersicht als); die Seitenleiste lässt sich mit dem Pfeil neben der Suche oder ⌃⌘S einklappen
 - **Kündigungsfristen:** „Kündigen bis“ wird aus Verlängerungstag und Frist berechnet – oder du trägst ein festes Datum ein
 - **Erinnerungen:** macOS-Mitteilung am Tag der Frist oder vorher, zu einer Uhrzeit deiner Wahl (in den Einstellungen änderbar); auch die folgenden Fristen sind schon eingeplant, falls du die App länger nicht öffnest – mit den Knöpfen „Erledigt“, „Gekündigt“ und „In 1 Woche erneut“
+- **Tarifwechsel:** Upgrade oder Downgrade (z. B. Claude Pro → Max) mit Datum und neuem Preis; steht im Verlauf und als Markierung im Kostenverlauf, frühere Tarife sind mit einem Klick wieder gewählt
 - **Verlauf:** wann gekündigt, wann wieder aktiviert und wie sich der Preis entwickelt hat – Einträge lassen sich korrigieren und nachtragen
 - **Kündigen per E-Mail:** öffnet eine fertig formulierte Kündigung in deinem Mailprogramm
 - **Auswertung:** aktive, gekündigte oder alle Abos – und was Kündigungen gespart haben

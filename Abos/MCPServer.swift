@@ -162,9 +162,16 @@ final class MCPServer {
 
     /// Übernimmt alle angegebenen Felder; nicht angegebene bleiben unverändert
     private func uebernehmen(_ a: [String: Any], in abo: Abo) throws {
+        // Vor dem Umbenennen merken: „Claude Pro“ → bisheriger Tarif „Pro“
+        let bisherigerTarif = abo.vermuteterTarif
         if let v = a["neuer_name"] as? String, !v.isEmpty { abo.name = v }
         if let v = a["kategorie"] as? String { abo.kategorie = v.trimmingCharacters(in: .whitespaces) }
-        if a.keys.contains("betrag") {
+        if let neu = a["tarif_wechseln"] as? String, !neu.trimmingCharacters(in: .whitespaces).isEmpty {
+            // Upgrade/Downgrade: neuer Tarif und (optional) neuer Betrag, im Verlauf als Tarifwechsel
+            let ab = try (a["tarif_ab"] as? String).map { try datum($0, "tarif_ab") } ?? Date()
+            let preis = a.keys.contains("betrag") ? zahl(a["betrag"]).map { max(0, $0) } : abo.betrag
+            abo.tarifWechseln(von: bisherigerTarif, zu: neu, betrag: preis, ab: min(ab, Date()), quelle: .claude)
+        } else if a.keys.contains("betrag") {
             if a["betrag"] is NSNull { abo.betragAendern(nil, quelle: .claude) }
             else if let v = zahl(a["betrag"]) { abo.betragAendern(max(0, v), quelle: .claude) }
         }
@@ -209,6 +216,7 @@ final class MCPServer {
         if let v = a["kontakt_email"] as? String { abo.kontaktEmail = v }
         if let v = a["telefon"] as? String { abo.telefon = v }
         if let v = a["vertragsnummer"] as? String { abo.vertragsnummer = v }
+        if let v = a["tarif"] as? String { abo.tarif = v.trimmingCharacters(in: .whitespaces) }
         if let v = a["notizen"] as? String { abo.notizen = v }
         if let v = a["notiz_anhaengen"] as? String, !v.isEmpty {
             abo.notizen = abo.notizen.isEmpty ? v : abo.notizen + "\n" + v
@@ -246,13 +254,15 @@ final class MCPServer {
         d["kontakt_email"] = abo.kontaktEmail
         d["telefon"] = abo.telefon
         d["vertragsnummer"] = abo.vertragsnummer
+        d["tarif"] = abo.tarif
         d["notizen"] = abo.notizen
         d["verlauf"] = abo.verlauf.map { e -> [String: Any] in
             ["datum": Self.zeitFormat.string(from: e.datum), "ereignis": e.art.rawValue, "quelle": e.quelle.rawValue,
              "frist_damals": iso(e.frist) ?? NSNull(),
              "laeuft_bis": iso(e.vertragsende.map(Abo.letzterTag(vor:))) ?? NSNull(),
              "betrag": e.betrag.map(runden) ?? NSNull(),
-             "alter_betrag": e.alterBetrag.map(runden) ?? NSNull()]
+             "alter_betrag": e.alterBetrag.map(runden) ?? NSNull(),
+             "tarif": e.tarif ?? NSNull(), "alter_tarif": e.alterTarif ?? NSNull()]
         }
         return d
     }
@@ -358,6 +368,7 @@ final class MCPServer {
         "kontakt_email": ["type": "string"],
         "telefon": ["type": "string"],
         "vertragsnummer": ["type": "string", "description": "Kunden- oder Vertragsnummer (keine Passwörter)"],
+        "tarif": ["type": "string", "description": "Aktueller Tarif, z. B. Pro oder Max (setzt ihn ohne Verlaufseintrag; für einen Wechsel tarif_wechseln nutzen)"],
         "notizen": ["type": "string", "description": "Ersetzt die Notizen"],
         "notiz_anhaengen": ["type": "string", "description": "Hängt eine Zeile an die Notizen an"],
     ]
@@ -370,6 +381,9 @@ final class MCPServer {
         aendern["id"] = ["type": "string", "description": "id aus abos_auflisten (bevorzugt)"]
         aendern["name"] = ["type": "string", "description": "Name zum Finden, falls keine id"]
         aendern["neuer_name"] = ["type": "string", "description": "Umbenennen"]
+        aendern["tarif_wechseln"] = ["type": "string",
+                                     "description": "Upgrade/Downgrade auf diesen Tarif (z. B. Max). Neuen Preis in betrag mitgeben. Wird im Verlauf als Tarifwechsel festgehalten."]
+        aendern["tarif_ab"] = ["type": "string", "description": "Nur mit tarif_wechseln: ab wann, JJJJ-MM-TT (Standard heute, nicht in der Zukunft)"]
         let lesen: [String: Any] = ["readOnlyHint": true, "destructiveHint": false]
         return [
             ["name": "abos_auflisten",
@@ -400,7 +414,7 @@ final class MCPServer {
              "inputSchema": ["type": "object", "properties": anlegen, "required": ["name"]]],
             ["name": "abo_aendern",
              "title": "Abo ändern",
-             "description": "Ändert Felder eines bestehenden Abos (nur die angegebenen). Auch zum Kündigen-Markieren (status=gekuendigt) oder Reaktivieren.",
+             "description": "Ändert Felder eines bestehenden Abos (nur die angegebenen). Auch zum Kündigen-Markieren (status=gekuendigt), Reaktivieren oder für einen Tarifwechsel (tarif_wechseln + betrag).",
              "annotations": ["readOnlyHint": false, "destructiveHint": false, "idempotentHint": true],
              "inputSchema": ["type": "object", "properties": aendern]],
         ]

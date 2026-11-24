@@ -34,6 +34,7 @@ struct AboDaten: Codable {
     var kontaktEmail: String?
     var telefon: String?
     var vertragsnummer: String?
+    var tarif: String?
     var erinnerungTage: Int?
     var verlauf: [VerlaufEintrag]?
     var notizen: String?
@@ -48,7 +49,7 @@ struct AboDaten: Codable {
         kuendigenBisFest = a.kuendigenBisFest; autoVerlaengerung = a.autoVerlaengerung
         verlaengerungMonate = a.verlaengerungMonate; anteilProzent = a.anteilProzent; status = a.statusRaw
         websiteLink = a.websiteLink; kuendigungsLink = a.kuendigungsLink; kontaktEmail = a.kontaktEmail
-        telefon = a.telefon; vertragsnummer = a.vertragsnummer; erinnerungTage = a.erinnerungTage
+        telefon = a.telefon; vertragsnummer = a.vertragsnummer; tarif = a.tarif; erinnerungTage = a.erinnerungTage
         verlauf = a.verlauf; notizen = a.notizen; erledigtFuerFrist = a.erledigtFuerFrist
         erneutErinnernAm = a.erneutErinnernAm; erstelltAm = a.erstelltAm
     }
@@ -76,6 +77,7 @@ struct AboDaten: Codable {
         if let kontaktEmail { a.kontaktEmail = kontaktEmail }
         if let telefon { a.telefon = telefon }
         if let vertragsnummer { a.vertragsnummer = vertragsnummer }
+        if let tarif { a.tarif = tarif }
         if let erinnerungTage { a.erinnerungTage = erinnerungTage }
         if let verlauf {
             a.verlaufLeeren()
@@ -221,13 +223,13 @@ enum Sicherung {
     }
 
     static func csvText(_ abos: [Abo]) -> String {
-        let kopf = [String(localized: "Name"), String(localized: "Kategorie"), String(localized: "Status"), String(localized: "Betrag"), String(localized: "Intervall"), String(localized: "Anteil %"), String(localized: "Pro Monat"), String(localized: "Pro Jahr"),
+        let kopf = [String(localized: "Name"), String(localized: "Tarif"), String(localized: "Kategorie"), String(localized: "Status"), String(localized: "Betrag"), String(localized: "Intervall"), String(localized: "Anteil %"), String(localized: "Pro Monat"), String(localized: "Pro Jahr"),
                     String(localized: "Kündigen bis"), String(localized: "Nächste Verlängerung"), String(localized: "Automatische Verlängerung"), String(localized: "Gekündigt am"),
                     String(localized: "Website"), String(localized: "Kündigungs-Link"), String(localized: "Kontakt-E-Mail"), String(localized: "Telefon"), String(localized: "Vertragsnummer"), String(localized: "Notizen")]
         var zeilen = [kopf.map(feld).joined(separator: ";")]
         for a in abos {
             let werte = [
-                a.name, a.kategorie, a.status.titel, zahl(a.betrag), a.intervall.titel, zahl(a.anteilProzent),
+                a.name, a.tarif, a.kategorie, a.status.titel, zahl(a.betrag), a.intervall.titel, zahl(a.anteilProzent),
                 zahl(a.proMonat), zahl(a.proJahr), datum(a.spaetestensKuendigenBis), datum(a.naechstesEnde()),
                 a.autoVerlaengerung ? String(localized: "ja") : String(localized: "nein"), datum(a.gekuendigtAm),
                 a.websiteLink, a.kuendigungsLink, a.kontaktEmail, a.telefon, a.vertragsnummer, a.notizen,
