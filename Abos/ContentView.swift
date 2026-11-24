@@ -50,6 +50,7 @@ struct ContentView: View {
     @FocusState private var sucheAktiv: Bool
     @AppStorage(StandardErinnerung.ersteSchluessel) private var standard1 = 0
     @AppStorage(StandardErinnerung.zweiteSchluessel) private var standard2 = -1
+    @AppStorage(StandardErinnerung.uhrzeitSchluessel) private var erinnerungUhrzeit = 9 * 60
     @AppStorage("sortFeld") private var sortFeld: SortFeld = .name
     @AppStorage("sortUmgekehrt") private var sortUmgekehrt = false
     @AppStorage("seitenleisteSichtbar") private var seitenleisteSichtbar = true
@@ -87,9 +88,10 @@ struct ContentView: View {
     private var planSignatur: String {
         let teile = abos.map { a in
             "\(a.uuid)|\(a.name)|\(a.kuendigenBisFest?.timeIntervalSince1970 ?? 0)|\(a.statusRaw)|\(a.spaetestensKuendigenBis?.timeIntervalSince1970 ?? 0)|"
-                + "\(a.erledigtFuerFrist?.timeIntervalSince1970 ?? 0)|\(a.erneutErinnernAm?.timeIntervalSince1970 ?? 0)"
+                + "\(a.erledigtFuerFrist?.timeIntervalSince1970 ?? 0)|\(a.erneutErinnernAm?.timeIntervalSince1970 ?? 0)|"
+                + "\(a.erinnerungTage)|\(a.autoVerlaengerung)|\(a.verlaengerungsSchritt)"
         }
-        return teile.joined(separator: ";") + "#\(standard1)#\(standard2)"
+        return teile.joined(separator: ";") + "#\(standard1)#\(standard2)#\(erinnerungUhrzeit)"
     }
 
     var body: some View {

@@ -14,8 +14,17 @@ enum StandardErinnerung {
         (7, String(localized: "1 Woche vorher")), (14, String(localized: "2 Wochen vorher")), (30, String(localized: "1 Monat vorher")),
     ]
 
+    /// Uhrzeit der Mitteilungen in Minuten nach Mitternacht (Standard 9:00)
+    static let uhrzeitSchluessel = "erinnerungUhrzeit"
+
     static func registrieren() {
-        UserDefaults.standard.register(defaults: [ersteSchluessel: 0, zweiteSchluessel: -1])
+        UserDefaults.standard.register(defaults: [ersteSchluessel: 0, zweiteSchluessel: -1, uhrzeitSchluessel: 9 * 60,
+                                                  Hintergrund.aktivSchluessel: true])
+    }
+
+    static var uhrzeit: (stunde: Int, minute: Int) {
+        let m = min(max(UserDefaults.standard.integer(forKey: uhrzeitSchluessel), 0), 24 * 60 - 1)
+        return (m / 60, m % 60)
     }
 
     /// Aktive Vorläufe, größter zuerst
@@ -40,6 +49,12 @@ enum StandardErinnerung {
 /// Lokale macOS-Mitteilungen für Kündigungsfristen. Kein Netzwerk, alles auf dem Gerät.
 enum Mitteilungen {
     static let kategorieID = "ABO_FRIST"
+    /// So viele kommende Kündigungsfristen pro Abo werden berücksichtigt
+    static let fristenVoraus = 3
+    /// Merkzettel in den Einstellungen der App (auch die Hintergrund-Prüfung liest und schreibt sie)
+    static let geplantSchluessel = "mitteilungEingeplant"
+    static let geprueftSchluessel = "mitteilungenGeprueftBis"
+    static let zugestelltSchluessel = "mitteilungenZugestellt"
 
     enum Aktion {
         static let erledigt = "ERLEDIGT"
@@ -96,49 +111,114 @@ enum Mitteilungen {
         }
     }
 
-    /// Plant alle Erinnerungen neu (alte werden vorher entfernt).
+    /// Eine Erinnerung, die zu einem bestimmten Zeitpunkt fällig wird
+    struct Termin {
+        let id: String
+        let aboID: UUID
+        let name: String
+        let datum: Date
+        let frist: Date
+        /// true bei „In 1 Woche erneut“
+        let erneut: Bool
+    }
+
+    /// Alle Erinnerungen nach `start`, früheste zuerst – für die nächsten Kündigungsfristen jedes aktiven Abos
+    @MainActor
+    static func termine(context: ModelContext, ab start: Date) -> [Termin] {
+        let abos = (try? context.fetch(FetchDescriptor<Abo>())) ?? []
+        let cal = Kalender.de
+        var liste: [Termin] = []
+        for abo in abos where abo.istAktiv {
+            if let erneut = abo.erneutErinnernAm, erneut > start, let frist = abo.spaetestensKuendigenBis(ab: erneut) {
+                let tag = Int(erneut.timeIntervalSince1970)
+                liste.append(Termin(id: "\(abo.uuid)-erneut-\(tag)", aboID: abo.uuid, name: abo.name,
+                                    datum: erneut, frist: frist, erneut: true))
+            }
+            for t in abo.erinnerungsTermine(jetzt: start, fristen: fristenVoraus) {
+                // Für diese Frist schon „Erledigt“ gewählt
+                if let erledigt = abo.erledigtFuerFrist, cal.isDate(erledigt, inSameDayAs: t.frist) { continue }
+                let tag = Int(cal.startOfDay(for: t.frist).timeIntervalSince1970)
+                liste.append(Termin(id: "\(abo.uuid)-\(tag)-\(t.vorlauf)", aboID: abo.uuid, name: abo.name,
+                                    datum: t.datum, frist: t.frist, erneut: false))
+            }
+        }
+        return liste.sorted { $0.datum < $1.datum }
+    }
+
+    /// Plant die nächste fällige Erinnerung bei macOS ein, damit sie pünktlich kommt.
+    /// macOS behält für Abos nur eine geplante Mitteilung – alle weiteren stellt die
+    /// Hintergrund-Prüfung zu, sobald sie fällig sind.
     @MainActor
     static func planen(context: ModelContext) {
         let center = UNUserNotificationCenter.current()
         center.removeAllPendingNotificationRequests()
-
-        let abos = (try? context.fetch(FetchDescriptor<Abo>())) ?? []
-        let cal = Kalender.de
-        let jetzt = Date()
-
-        for abo in abos where abo.istAktiv {
-            guard let frist = abo.spaetestensKuendigenBis else { continue }
-            let fristText = Format.datum(frist)
-
-            // "In 1 Woche erneut"
-            if let erneut = abo.erneutErinnernAm, erneut > jetzt {
-                hinzufuegen(id: "\(abo.uuid)-erneut", abo: abo, datum: erneut,
-                            titel: String(localized: "Erinnerung: \(abo.name) kündigen?"),
-                            text: String(localized: "Spätestens kündigen bis \(fristText)."))
-            }
-
-            if let erledigt = abo.erledigtFuerFrist, cal.isDate(erledigt, inSameDayAs: frist) { continue }
-
-            for termin in abo.erinnerungsTermine(jetzt: jetzt) {
-                let rest = termin.vorlauf == 0 ? String(localized: "heute ist der letzte Tag")
-                    : termin.vorlauf == 1 ? String(localized: "noch 1 Tag") : String(localized: "noch \(termin.vorlauf) Tage")
-                hinzufuegen(id: "\(abo.uuid)-\(termin.vorlauf)", abo: abo, datum: termin.datum,
-                            titel: String(localized: "Kündigungsfrist: \(abo.name)"),
-                            text: String(localized: "Spätestens kündigen bis \(fristText) – \(rest)."))
-            }
+        guard let naechster = termine(context: context, ab: Date()).first else {
+            UserDefaults.standard.removeObject(forKey: geplantSchluessel)
+            return
         }
+        let komponenten = Kalender.de.dateComponents([.year, .month, .day, .hour, .minute], from: naechster.datum)
+        center.add(UNNotificationRequest(identifier: naechster.id, content: inhalt(naechster, am: naechster.datum),
+                                         trigger: UNCalendarNotificationTrigger(dateMatching: komponenten, repeats: false)))
+        UserDefaults.standard.set(naechster.id, forKey: geplantSchluessel)
     }
 
-    private static func hinzufuegen(id: String, abo: Abo, datum: Date, titel: String, text: String) {
+    /// Hintergrund-Prüfung: alles zustellen, was seit der letzten Prüfung fällig wurde und noch nicht
+    /// gekommen ist, dann die nächste Erinnerung einplanen. Verpasste Erinnerungen (Mac aus) kommen
+    /// nachträglich, solange ihre Frist noch nicht vorbei ist.
+    @MainActor
+    static func pruefen(context: ModelContext) async {
+        let d = UserDefaults.standard
+        let cal = Kalender.de
+        let center = UNUserNotificationCenter.current()
+        let jetzt = Date()
+        let heute = cal.startOfDay(for: jetzt)
+        // Beim ersten Mal nichts nachholen; sonst höchstens zwei Wochen zurück
+        let zuletzt = d.object(forKey: geprueftSchluessel) as? Date ?? jetzt
+        let start = max(zuletzt, cal.date(byAdding: .day, value: -14, to: jetzt) ?? jetzt)
+
+        let ausstehend = Set(await center.pendingNotificationRequests().map(\.identifier))
+        let imMitteilungszentrum = Set(await center.deliveredNotifications().map(\.request.identifier))
+        let eingeplant = d.string(forKey: geplantSchluessel)
+        var zugestellt = d.stringArray(forKey: zugestelltSchluessel) ?? []
+
+        for t in termine(context: context, ab: start) where t.datum <= jetzt {
+            guard cal.startOfDay(for: t.frist) >= heute else { continue }       // Frist schon vorbei
+            if zugestellt.contains(t.id) || imMitteilungszentrum.contains(t.id) { continue }
+            if ausstehend.contains(t.id) { continue }                            // macOS stellt sie gleich selbst zu
+            if t.id == eingeplant {                                              // war eingeplant und ist schon gekommen
+                zugestellt.append(t.id)
+                continue
+            }
+            try? await center.add(UNNotificationRequest(identifier: t.id, content: inhalt(t, am: jetzt), trigger: nil))
+            zugestellt.append(t.id)
+        }
+
+        d.set(Array(zugestellt.suffix(300)), forKey: zugestelltSchluessel)
+        d.set(jetzt, forKey: geprueftSchluessel)
+        planen(context: context)
+        // Der Auftrag an macOS läuft asynchron; kurz warten, bevor sich der Prozess beendet
+        try? await Task.sleep(for: .seconds(1))
+    }
+
+    /// Text der Mitteilung; „noch … Tage“ zählt ab dem Tag, an dem sie erscheint
+    private static func inhalt(_ t: Termin, am tag: Date) -> UNMutableNotificationContent {
+        let cal = Kalender.de
+        let fristText = Format.datum(t.frist)
         let inhalt = UNMutableNotificationContent()
-        inhalt.title = titel
-        inhalt.body = text
+        if t.erneut {
+            inhalt.title = String(localized: "Erinnerung: \(t.name) kündigen?")
+            inhalt.body = String(localized: "Spätestens kündigen bis \(fristText).")
+        } else {
+            let rest = cal.dateComponents([.day], from: cal.startOfDay(for: tag), to: cal.startOfDay(for: t.frist)).day ?? 0
+            let restText = rest <= 0 ? String(localized: "heute ist der letzte Tag")
+                : rest == 1 ? String(localized: "noch 1 Tag") : String(localized: "noch \(rest) Tage")
+            inhalt.title = String(localized: "Kündigungsfrist: \(t.name)")
+            inhalt.body = String(localized: "Spätestens kündigen bis \(fristText) – \(restText).")
+        }
         inhalt.sound = .default
         inhalt.categoryIdentifier = kategorieID
-        inhalt.userInfo = ["aboID": abo.uuid.uuidString]
-        let komponenten = Kalender.de.dateComponents([.year, .month, .day, .hour, .minute], from: datum)
-        let trigger = UNCalendarNotificationTrigger(dateMatching: komponenten, repeats: false)
-        UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: id, content: inhalt, trigger: trigger))
+        inhalt.userInfo = ["aboID": t.aboID.uuidString]
+        return inhalt
     }
 
     static func testSenden() {

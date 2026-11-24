@@ -28,7 +28,9 @@ enum Start {
     static func main() {
         StandardErinnerung.registrieren()
         MainActor.assumeIsolated {
-            if CommandLine.arguments.contains("--mcp") {
+            if CommandLine.arguments.contains("--erinnern") {
+                Hintergrund.laufen()
+            } else if CommandLine.arguments.contains("--mcp") {
                 MCPServer().laufen()
             } else {
                 AbosApp.main()
@@ -77,6 +79,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         MainActor.assumeIsolated { Fokus.einrichten() }
+        Hintergrund.einrichten()
     }
 
     /// Wie bei anderen Mac-Apps: Fenster schließen lässt die App im Dock weiterlaufen, ⌘Q beendet sie
@@ -110,7 +113,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
 struct EinstellungenView: View {
     @AppStorage(StandardErinnerung.ersteSchluessel) private var erste = 0
     @AppStorage(StandardErinnerung.zweiteSchluessel) private var zweite = -1
+    @AppStorage(StandardErinnerung.uhrzeitSchluessel) private var uhrzeit = 9 * 60
     @State private var berechtigung = "…"
+    @AppStorage(Hintergrund.aktivSchluessel) private var hintergrund = true
+    @State private var dienst = Hintergrund.zustand
+    @State private var naechste: String?
     @AppStorage(Sicherung.letztesBackupSchluessel) private var letztesBackup: Double = 0
 
     var body: some View {
@@ -125,12 +132,31 @@ struct EinstellungenView: View {
                 Picker("Zweite Erinnerung", selection: $zweite) {
                     ForEach(StandardErinnerung.optionen, id: \.tage) { Text($0.titel).tag($0.tage) }
                 }
-                Text("Gilt für alle Abos, bei denen in der Abo-Karte „Standard“ eingestellt ist. Mitteilungen kommen jeweils um 9:00 Uhr.")
+                DatePicker("Uhrzeit", selection: uhrzeitDatum, displayedComponents: .hourAndMinute)
+                Text("Gilt für alle Abos, bei denen in der Abo-Karte „Standard“ eingestellt ist. Die Uhrzeit gilt für alle Erinnerungen.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
             Section("macOS-Mitteilungen") {
                 LabeledContent("Berechtigung", value: berechtigung)
+                Toggle("Im Hintergrund prüfen", isOn: $hintergrund)
+                    .onChange(of: hintergrund) {
+                        Hintergrund.einrichten()
+                        dienst = Hintergrund.zustand
+                    }
+                if hintergrund {
+                    switch dienst {
+                    case .aktiv:
+                        EmptyView()
+                    case .freigabeNoetig:
+                        LabeledContent("Hintergrund-Prüfung") {
+                            Button("In den Systemeinstellungen erlauben") { Hintergrund.freigabeOeffnen() }
+                        }
+                    case .aus, .fehlt:
+                        LabeledContent("Hintergrund-Prüfung", value: String(localized: "konnte nicht gestartet werden"))
+                    }
+                }
+                LabeledContent("Nächste Erinnerung", value: naechste ?? String(localized: "keine"))
                 HStack {
                     Button("Testmitteilung senden") { Mitteilungen.testSenden() }
                     Button("Systemeinstellungen öffnen") {
@@ -139,7 +165,7 @@ struct EinstellungenView: View {
                         }
                     }
                 }
-                Text("Damit die Buttons „Erledigt“, „Gekündigt“ und „In 1 Woche erneut“ immer sichtbar sind, in den Systemeinstellungen für Abos den Stil „Hinweise“ wählen.")
+                Text("Die Hintergrund-Prüfung schaut alle 15 Minuten nach fälligen Erinnerungen – auch wenn Abos geschlossen ist. Was verpasst wurde, weil der Mac aus war, kommt nachträglich. Damit die Buttons „Erledigt“, „Gekündigt“ und „In 1 Woche erneut“ immer sichtbar sind, in den Systemeinstellungen für Abos den Stil „Hinweise“ wählen.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -161,6 +187,26 @@ struct EinstellungenView: View {
         .formStyle(.grouped)
         .frame(width: 480)
         .fixedSize(horizontal: false, vertical: true)
-        .task { berechtigung = await Mitteilungen.berechtigungText() }
+        .task {
+            berechtigung = await Mitteilungen.berechtigungText()
+            dienst = Hintergrund.zustand
+            if let t = Mitteilungen.termine(context: Datenbank.container.mainContext, ab: Date()).first {
+                naechste = "\(Format.datumUhrzeit(t.datum)) · \(t.name)"
+            }
+        }
+        // Nach dem Erlauben in den Systemeinstellungen den Zustand neu lesen
+        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
+            dienst = Hintergrund.zustand
+        }
+    }
+
+    /// Minuten nach Mitternacht als Datum für den Uhrzeit-Picker
+    private var uhrzeitDatum: Binding<Date> {
+        Binding(
+            get: { Kalender.de.date(bySettingHour: uhrzeit / 60, minute: uhrzeit % 60, second: 0, of: Date()) ?? Date() },
+            set: { neu in
+                let t = Kalender.de.dateComponents([.hour, .minute], from: neu)
+                uhrzeit = (t.hour ?? 9) * 60 + (t.minute ?? 0)
+            })
     }
 }

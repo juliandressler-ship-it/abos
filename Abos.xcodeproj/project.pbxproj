@@ -6,7 +6,26 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		AB0000000000000000000012 /* de.juliandressler.Abos.erinnerung.plist in Hintergrunddienst */ = {isa = PBXBuildFile; fileRef = AB0000000000000000000011 /* de.juliandressler.Abos.erinnerung.plist */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		AB0000000000000000000013 /* Hintergrunddienst */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = Contents/Library/LaunchAgents;
+			dstSubfolderSpec = 1;
+			files = (
+				AB0000000000000000000012 /* de.juliandressler.Abos.erinnerung.plist in Hintergrunddienst */,
+			);
+			name = Hintergrunddienst;
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFileReference section */
+		AB0000000000000000000011 /* de.juliandressler.Abos.erinnerung.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; name = de.juliandressler.Abos.erinnerung.plist; path = Hintergrund/de.juliandressler.Abos.erinnerung.plist; sourceTree = "<group>"; };
 		AB0000000000000000000001 /* Abos.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Abos.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -29,6 +48,7 @@
 			isa = PBXGroup;
 			children = (
 				AB0000000000000000000002 /* Abos */,
+				AB0000000000000000000011 /* de.juliandressler.Abos.erinnerung.plist */,
 				AB0000000000000000000005 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -51,6 +71,7 @@
 				AB0000000000000000000008 /* Sources */,
 				AB0000000000000000000003 /* Frameworks */,
 				AB0000000000000000000009 /* Resources */,
+				AB0000000000000000000013 /* Hintergrunddienst */,
 			);
 			buildRules = (
 			);

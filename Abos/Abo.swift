@@ -185,9 +185,27 @@ extension Abo {
     }
 
     /// "Spätestens kündigen bis"
-    var spaetestensKuendigenBis: Date? {
-        if let fest = kuendigenBisFest { return naechsterFesterTermin(fest) }
-        return naechstesEnde().map { fristDatum(fuerEnde: $0) }
+    var spaetestensKuendigenBis: Date? { spaetestensKuendigenBis(ab: Date()) }
+
+    /// Erste Kündigungsfrist, die an diesem Tag noch nicht verstrichen ist
+    func spaetestensKuendigenBis(ab heute: Date) -> Date? {
+        if let fest = kuendigenBisFest { return naechsterFesterTermin(fest, heute: heute) }
+        return naechstesEnde(heute: heute).map { fristDatum(fuerEnde: $0) }
+    }
+
+    /// Die nächsten Kündigungsfristen: die aktuelle und – bei automatischer Verlängerung –
+    /// die der folgenden Laufzeiten
+    func kommendeFristen(anzahl: Int, heute: Date = Date()) -> [Date] {
+        let cal = Kalender.de
+        var liste: [Date] = []
+        var ab = heute
+        while liste.count < anzahl, let frist = spaetestensKuendigenBis(ab: ab) {
+            if let letzte = liste.last, frist <= letzte { break }
+            liste.append(frist)
+            guard autoVerlaengerung else { break }
+            ab = cal.date(byAdding: .day, value: 1, to: cal.startOfDay(for: frist)) ?? frist
+        }
+        return liste
     }
 
     /// „Kündigen bis“ direkt setzen. Bei festem Datum wird das Datum ersetzt; bei einer Frist
@@ -277,16 +295,20 @@ extension Abo {
         }
     }
 
-    /// Konkrete Erinnerungszeitpunkte (jeweils 9:00 Uhr), nur zukünftige
-    func erinnerungsTermine(jetzt: Date = Date()) -> [(vorlauf: Int, datum: Date)] {
-        guard istAktiv, let frist = spaetestensKuendigenBis else { return [] }
+    /// Konkrete Erinnerungszeitpunkte zur eingestellten Uhrzeit, nur zukünftige.
+    /// `fristen`: für wie viele kommende Kündigungsfristen (1 = nur die nächste)
+    func erinnerungsTermine(jetzt: Date = Date(), fristen anzahl: Int = 1) -> [(vorlauf: Int, frist: Date, datum: Date)] {
+        guard istAktiv else { return [] }
         let cal = Kalender.de
-        var liste: [(vorlauf: Int, datum: Date)] = []
-        for vorlauf in erinnerungsVorlaeufe {
-            guard let tag = cal.date(byAdding: .day, value: -vorlauf, to: frist),
-                  let ziel = cal.date(bySettingHour: 9, minute: 0, second: 0, of: tag),
-                  ziel > jetzt else { continue }
-            liste.append((vorlauf: vorlauf, datum: ziel))
+        let zeit = StandardErinnerung.uhrzeit
+        var liste: [(vorlauf: Int, frist: Date, datum: Date)] = []
+        for frist in kommendeFristen(anzahl: anzahl, heute: jetzt) {
+            for vorlauf in erinnerungsVorlaeufe {
+                guard let tag = cal.date(byAdding: .day, value: -vorlauf, to: frist),
+                      let ziel = cal.date(bySettingHour: zeit.stunde, minute: zeit.minute, second: 0, of: tag),
+                      ziel > jetzt else { continue }
+                liste.append((vorlauf: vorlauf, frist: frist, datum: ziel))
+            }
         }
         return liste
     }

@@ -1730,6 +1730,7 @@
       }
     },
     "Damit die Buttons „Erledigt“, „Gekündigt“ und „In 1 Woche erneut“ immer sichtbar sind, in den Systemeinstellungen für Abos den Stil „Hinweise“ wählen.": {
+      "extractionState": "stale",
       "localizations": {
         "de": {
           "stringUnit": {
@@ -1949,6 +1950,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "The file is not a readable Abos backup"
+          }
+        }
+      }
+    },
+    "Die Hintergrund-Prüfung schaut alle 15 Minuten nach fälligen Erinnerungen – auch wenn Abos geschlossen ist. Was verpasst wurde, weil der Mac aus war, kommt nachträglich. Damit die Buttons „Erledigt“, „Gekündigt“ und „In 1 Woche erneut“ immer sichtbar sind, in den Systemeinstellungen für Abos den Stil „Hinweise“ wählen.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Hintergrund-Prüfung schaut alle 15 Minuten nach fälligen Erinnerungen – auch wenn Abos geschlossen ist. Was verpasst wurde, weil der Mac aus war, kommt nachträglich. Damit die Buttons „Erledigt“, „Gekündigt“ und „In 1 Woche erneut“ immer sichtbar sind, in den Systemeinstellungen für Abos den Stil „Hinweise“ wählen."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The background check looks for due reminders every 15 minutes – even when Abos is closed. Reminders missed while your Mac was off arrive afterwards. To always see the “Done”, “Cancelled” and “Remind in 1 week” buttons, choose the “Alerts” style for Abos in System Settings."
           }
         }
       }
@@ -2721,7 +2738,24 @@
         }
       }
     },
+    "Gilt für alle Abos, bei denen in der Abo-Karte „Standard“ eingestellt ist. Die Uhrzeit gilt für alle Erinnerungen.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gilt für alle Abos, bei denen in der Abo-Karte „Standard“ eingestellt ist. Die Uhrzeit gilt für alle Erinnerungen."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Applies to all subscriptions set to “Default” in their card. The time applies to all reminders."
+          }
+        }
+      }
+    },
     "Gilt für alle Abos, bei denen in der Abo-Karte „Standard“ eingestellt ist. Mitteilungen kommen jeweils um 9:00 Uhr.": {
+      "extractionState": "stale",
       "localizations": {
         "de": {
           "stringUnit": {
@@ -2749,6 +2783,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Today"
+          }
+        }
+      }
+    },
+    "Hintergrund-Prüfung": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hintergrund-Prüfung"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Background check"
           }
         }
       }
@@ -2797,6 +2847,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Open in browser"
+          }
+        }
+      }
+    },
+    "Im Hintergrund prüfen": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Im Hintergrund prüfen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Check in the background"
           }
         }
       }
@@ -2893,6 +2959,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Search table"
+          }
+        }
+      }
+    },
+    "In den Systemeinstellungen erlauben": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In den Systemeinstellungen erlauben"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Allow in System Settings"
           }
         }
       }
@@ -4241,6 +4323,22 @@
         }
       }
     },
+    "Nächste Erinnerung": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nächste Erinnerung"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Next reminder"
+          }
+        }
+      }
+    },
     "Nächste Kündigungsfristen": {
       "localizations": {
         "de": {
@@ -5134,6 +5232,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Enter the next renewal or choose “Fixed date”"
+          }
+        }
+      }
+    },
+    "Uhrzeit": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Uhrzeit"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Time"
           }
         }
       }
@@ -6306,6 +6420,22 @@
         }
       }
     },
+    "keine": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "keine"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "none"
+          }
+        }
+      }
+    },
     "keine anstehend": {
       "localizations": {
         "de": {
@@ -6318,6 +6448,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "none upcoming"
+          }
+        }
+      }
+    },
+    "konnte nicht gestartet werden": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "konnte nicht gestartet werden"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "could not be started"
           }
         }
       }
