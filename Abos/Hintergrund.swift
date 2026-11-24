@@ -21,12 +21,41 @@ enum Hintergrund {
         }
     }
 
-    /// Beim App-Start und beim Umschalten in den Einstellungen: Dienst an- oder abmelden
+    /// Für welchen Stand der App der Dienst zuletzt angemeldet wurde
+    private static let angemeldetFuerSchluessel = "hintergrundAngemeldetFuer"
+
+    /// Kennung dieses App-Stands: Build-Nummer und Zeitpunkt des Programms. macOS bindet den Dienst
+    /// an genau den Build, der ihn angemeldet hat – nach einem Update startet er sonst nicht mehr.
+    private static var appStand: String {
+        let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "?"
+        let datei = Bundle.main.executableURL.flatMap { try? FileManager.default.attributesOfItem(atPath: $0.path)[.modificationDate] as? Date }
+        return "\(build)-\(Int(datei?.timeIntervalSince1970 ?? 0))"
+    }
+
+    /// Beim App-Start und beim Umschalten in den Einstellungen: Dienst an- oder abmelden.
+    /// Nach einem Update wird er neu angemeldet, damit macOS ihn für den neuen Build zulässt.
     static func einrichten() {
-        if UserDefaults.standard.bool(forKey: aktivSchluessel) {
-            if dienst.status != .enabled { try? dienst.register() }
-        } else if dienst.status != .notRegistered {
-            try? dienst.unregister()
+        let d = UserDefaults.standard
+        if d.bool(forKey: aktivSchluessel) {
+            if dienst.status == .enabled && d.string(forKey: angemeldetFuerSchluessel) == appStand { return }
+            let stand = appStand
+            func anmelden() {
+                do {
+                    try dienst.register()
+                    d.set(stand, forKey: angemeldetFuerSchluessel)
+                } catch {
+                    d.removeObject(forKey: angemeldetFuerSchluessel)
+                }
+            }
+            if dienst.status == .enabled || dienst.status == .requiresApproval {
+                // Erst vollständig abmelden lassen, dann für diesen Build neu anmelden
+                dienst.unregister { _ in DispatchQueue.main.async { anmelden() } }
+            } else {
+                anmelden()
+            }
+        } else {
+            if dienst.status != .notRegistered { try? dienst.unregister() }
+            d.removeObject(forKey: angemeldetFuerSchluessel)
         }
     }
 
