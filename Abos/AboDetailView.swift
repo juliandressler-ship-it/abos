@@ -1030,11 +1030,11 @@ struct VerlaufZeile: View {
         }
     }
 
-    /// „24.12.2026“ für geplante oder nachgetragene Wechsel ohne Uhrzeit, sonst mit Uhrzeit
+    /// „ab 24.12.2026“ für geplante Wechsel, nur das Datum bei Einträgen ohne Uhrzeit (00:00), sonst mit Uhrzeit
     private var zeitpunkt: String {
         let t = Kalender.de.dateComponents([.hour, .minute], from: eintrag.datum)
         if eintrag.geplant == true { return String(localized: "ab \(Format.datum(eintrag.datum))") }
-        if eintrag.art == .tarif && t.hour == 0 && t.minute == 0 { return Format.datum(eintrag.datum) }
+        if t.hour == 0 && t.minute == 0 { return Format.datum(eintrag.datum) }
         return Format.datumUhrzeitLang(eintrag.datum)
     }
 

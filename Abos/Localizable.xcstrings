@@ -49,6 +49,22 @@
         }
       }
     },
+    " Ersetzt den bisher geplanten Wechsel zu %@ am %@.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": " Ersetzt den bisher geplanten Wechsel zu %1$@ am %2$@."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": " Replaces the change to %@ planned for %@."
+          }
+        }
+      }
+    },
     " Ohne Kündigung läuft das Abo %@ weiter.": {
       "localizations": {
         "de": {
@@ -221,6 +237,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "%1$@ · %2$@"
+          }
+        }
+      }
+    },
+    "%@ · %@ ab %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ · %2$@ ab %3$@"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ · %@ from %@"
           }
         }
       }
@@ -817,6 +849,22 @@
         }
       }
     },
+    "Ab %@ – z. B. für ein Downgrade zum Ende der Laufzeit": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ab %@ – z. B. für ein Downgrade zum Ende der Laufzeit"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "From %@ – e.g. for a downgrade at the end of the term"
+          }
+        }
+      }
+    },
     "Ab Verlängerung": {
       "localizations": {
         "de": {
@@ -829,6 +877,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "From renewal"
+          }
+        }
+      }
+    },
+    "Ab dann „%@“ heißen": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ab dann „%@“ heißen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rename to “%@” from then on"
           }
         }
       }
@@ -1729,6 +1793,22 @@
         }
       }
     },
+    "Bis %@ bleibt alles wie jetzt, ab %@ stellt Abos automatisch um.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bis %1$@ bleibt alles wie jetzt, ab %2$@ stellt Abos automatisch um."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nothing changes until %@; from %@ Abos switches automatically."
+          }
+        }
+      }
+    },
     "Bisher": {
       "localizations": {
         "de": {
@@ -1986,6 +2066,22 @@
         }
       }
     },
+    "Der geplante Wechsel findet nicht statt": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Der geplante Wechsel findet nicht statt"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The planned change will not happen"
+          }
+        }
+      }
+    },
     "Diagramm": {
       "localizations": {
         "de": {
@@ -2174,6 +2270,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Downgrade"
+          }
+        }
+      }
+    },
+    "Downgrade geplant": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Downgrade geplant"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Downgrade planned"
           }
         }
       }
@@ -2798,6 +2910,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Show cancelled subscriptions"
+          }
+        }
+      }
+    },
+    "Geplant": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Geplant"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Planned"
           }
         }
       }
@@ -5380,6 +5508,22 @@
         }
       }
     },
+    "Tarifwechsel geplant": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tarifwechsel geplant"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Plan change planned"
+          }
+        }
+      }
+    },
     "Telefon": {
       "localizations": {
         "de": {
@@ -5520,6 +5664,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Upgrade"
+          }
+        }
+      }
+    },
+    "Upgrade geplant": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Upgrade geplant"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Upgrade planned"
           }
         }
       }
@@ -5829,6 +5989,22 @@
         }
       }
     },
+    "Wechsel planen": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wechsel planen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Plan Change"
+          }
+        }
+      }
+    },
     "Wechseln": {
       "localizations": {
         "de": {
@@ -6101,6 +6277,22 @@
         }
       }
     },
+    "Zur nächsten Verlängerung": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zur nächsten Verlängerung"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "At next renewal"
+          }
+        }
+      }
+    },
     "Zur Übersicht": {
       "localizations": {
         "de": {
@@ -6161,6 +6353,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Second reminder"
+          }
+        }
+      }
+    },
+    "ab %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ab %@"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "from %@"
           }
         }
       }

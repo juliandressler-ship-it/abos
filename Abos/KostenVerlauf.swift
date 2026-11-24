@@ -391,14 +391,26 @@ struct VerlaufDiagramm: View {
         }
     }
 
-    /// Tarifwechsel: gestrichelte Linie mit kurzer Beschriftung („↑ Max“) am oberen Rand
+    /// Tarifwechsel: gestrichelte Linie mit kurzer Beschriftung („↑ Max“) rechts daneben.
+    /// Liegen Wechsel dicht beieinander, rutscht die Beschriftung eine Zeile tiefer.
     private func ereignisLinien(_ skala: Skala, _ lage: Lage, _ f: CGRect) -> some View {
-        ZStack(alignment: .topLeading) {
-            ForEach(ereignisse.filter { $0.datum >= skala.start && $0.datum <= skala.ende }) { e in
+        let sichtbar = ereignisse.filter { $0.datum >= skala.start && $0.datum <= skala.ende }.sorted { $0.datum < $1.datum }
+        var zeilen: [Int] = []
+        var belegtBis: [CGFloat] = []          // rechtes Ende der letzten Beschriftung je Zeile
+        for e in sichtbar {
+            let x = lage.x(e.datum)
+            let zeile = belegtBis.firstIndex { $0 < x - 2 } ?? belegtBis.count
+            if zeile == belegtBis.count { belegtBis.append(0) }
+            belegtBis[zeile] = x + 6 + CGFloat(e.text.count) * 6.5
+            zeilen.append(zeile)
+        }
+        return ZStack(alignment: .topLeading) {
+            ForEach(Array(sichtbar.enumerated()), id: \.element.id) { i, e in
                 let x = lage.x(e.datum)
+                let y = f.minY + 12 + CGFloat(zeilen[i]) * 13
                 let farbe: Color = e.hoch == true ? .orange : e.hoch == false ? .green : .secondary
                 Path { p in
-                    p.move(to: CGPoint(x: x, y: f.minY + 8))
+                    p.move(to: CGPoint(x: x, y: y - 6))
                     p.addLine(to: CGPoint(x: x, y: f.maxY))
                 }
                 .stroke(farbe.opacity(0.7), style: StrokeStyle(lineWidth: 1, dash: [3, 3]))
@@ -406,7 +418,10 @@ struct VerlaufDiagramm: View {
                     .font(.caption2.weight(.medium))
                     .foregroundStyle(farbe)
                     .fixedSize()
-                    .position(x: x, y: f.minY + 2)
+                    .padding(.horizontal, 2)
+                    .background(Color(nsColor: .windowBackgroundColor).opacity(0.85), in: RoundedRectangle(cornerRadius: 3))
+                    .alignmentGuide(.leading) { _ in 0 }
+                    .position(x: x + 4 + CGFloat(e.text.count) * 3.25, y: y)
             }
         }
     }

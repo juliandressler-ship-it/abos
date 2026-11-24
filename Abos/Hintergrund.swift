@@ -33,29 +33,47 @@ enum Hintergrund {
     }
 
     /// Beim App-Start und beim Umschalten in den Einstellungen: Dienst an- oder abmelden.
-    /// Nach einem Update wird er neu angemeldet, damit macOS ihn für den neuen Build zulässt.
+    /// Nach einem Update wird er neu angemeldet, damit macOS ihn für den neuen Build zulässt –
+    /// mit kurzer Verzögerung, weil macOS die neue Version erst erfassen muss.
     static func einrichten() {
         let d = UserDefaults.standard
-        if d.bool(forKey: aktivSchluessel) {
-            if dienst.status == .enabled && d.string(forKey: angemeldetFuerSchluessel) == appStand { return }
-            let stand = appStand
-            func anmelden() {
-                do {
-                    try dienst.register()
-                    d.set(stand, forKey: angemeldetFuerSchluessel)
-                } catch {
-                    d.removeObject(forKey: angemeldetFuerSchluessel)
-                }
-            }
-            if dienst.status == .enabled || dienst.status == .requiresApproval {
-                // Erst vollständig abmelden lassen, dann für diesen Build neu anmelden
-                dienst.unregister { _ in DispatchQueue.main.async { anmelden() } }
-            } else {
-                anmelden()
-            }
-        } else {
+        guard d.bool(forKey: aktivSchluessel) else {
             if dienst.status != .notRegistered { try? dienst.unregister() }
             d.removeObject(forKey: angemeldetFuerSchluessel)
+            return
+        }
+        if dienst.status == .enabled && d.string(forKey: angemeldetFuerSchluessel) == appStand { return }
+        if dienst.status == .enabled {
+            // Update: erst kurz warten, dann neu anmelden und prüfen, ob der Dienst wirklich läuft
+            DispatchQueue.main.asyncAfter(deadline: .now() + 5) { neuAnmelden(versuch: 1) }
+        } else {
+            anmelden()
+        }
+    }
+
+    private static func anmelden() {
+        let d = UserDefaults.standard
+        do {
+            try dienst.register()
+            d.set(appStand, forKey: angemeldetFuerSchluessel)
+        } catch {
+            d.removeObject(forKey: angemeldetFuerSchluessel)
+        }
+    }
+
+    /// Ab- und wieder anmelden. Der Dienst prüft sofort nach dem Anmelden einmal; kommt diese Prüfung
+    /// nicht an, hat macOS den neuen Build noch nicht zugelassen – dann ein zweiter Versuch.
+    private static func neuAnmelden(versuch: Int) {
+        let start = Date()
+        dienst.unregister { _ in
+            DispatchQueue.main.async {
+                anmelden()
+                guard versuch < 3 else { return }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 30) {
+                    let geprueft = UserDefaults.standard.object(forKey: Mitteilungen.geprueftSchluessel) as? Date
+                    if (geprueft ?? .distantPast) < start { neuAnmelden(versuch: versuch + 1) }
+                }
+            }
         }
     }
 
