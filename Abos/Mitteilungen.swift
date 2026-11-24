@@ -167,6 +167,10 @@ enum Mitteilungen {
     /// nachträglich, solange ihre Frist noch nicht vorbei ist.
     @MainActor
     static func pruefen(context: ModelContext) async {
+        if Abo.geplanteWechselAnwenden(context: context) {
+            DistributedNotificationCenter.default().postNotificationName(Datenbank.geaendert, object: nil, userInfo: nil,
+                                                                         deliverImmediately: true)
+        }
         let d = UserDefaults.standard
         let cal = Kalender.de
         let center = UNUserNotificationCenter.current()

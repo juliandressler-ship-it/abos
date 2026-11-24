@@ -164,13 +164,17 @@ final class MCPServer {
     private func uebernehmen(_ a: [String: Any], in abo: Abo) throws {
         // Vor dem Umbenennen merken: „Claude Pro“ → bisheriger Tarif „Pro“
         let bisherigerTarif = abo.vermuteterTarif
-        if let v = a["neuer_name"] as? String, !v.isEmpty { abo.name = v }
+        let tarifAb = try (a["tarif_ab"] as? String).map { try datum($0, "tarif_ab") } ?? Date()
+        // Geplanter Tarifwechsel: der neue Name gilt erst ab dem Wechsel
+        let tarifGeplant = a["tarif_wechseln"] != nil && Kalender.de.startOfDay(for: tarifAb) > Kalender.de.startOfDay(for: Date())
+        if !tarifGeplant, let v = a["neuer_name"] as? String, !v.isEmpty { abo.name = v }
         if let v = a["kategorie"] as? String { abo.kategorie = v.trimmingCharacters(in: .whitespaces) }
         if let neu = a["tarif_wechseln"] as? String, !neu.trimmingCharacters(in: .whitespaces).isEmpty {
             // Upgrade/Downgrade: neuer Tarif und (optional) neuer Betrag, im Verlauf als Tarifwechsel
-            let ab = try (a["tarif_ab"] as? String).map { try datum($0, "tarif_ab") } ?? Date()
             let preis = a.keys.contains("betrag") ? zahl(a["betrag"]).map { max(0, $0) } : abo.betrag
-            abo.tarifWechseln(von: bisherigerTarif, zu: neu, betrag: preis, ab: min(ab, Date()), quelle: .claude)
+            abo.tarifWechseln(von: bisherigerTarif, zu: neu, betrag: preis,
+                              ab: Kalender.de.isDateInToday(tarifAb) ? Date() : tarifAb,
+                              neuerName: tarifGeplant ? (a["neuer_name"] as? String) : nil, quelle: .claude)
         } else if a.keys.contains("betrag") {
             if a["betrag"] is NSNull { abo.betragAendern(nil, quelle: .claude) }
             else if let v = zahl(a["betrag"]) { abo.betragAendern(max(0, v), quelle: .claude) }
@@ -262,7 +266,8 @@ final class MCPServer {
              "laeuft_bis": iso(e.vertragsende.map(Abo.letzterTag(vor:))) ?? NSNull(),
              "betrag": e.betrag.map(runden) ?? NSNull(),
              "alter_betrag": e.alterBetrag.map(runden) ?? NSNull(),
-             "tarif": e.tarif ?? NSNull(), "alter_tarif": e.alterTarif ?? NSNull()]
+             "tarif": e.tarif ?? NSNull(), "alter_tarif": e.alterTarif ?? NSNull(),
+             "geplant": e.geplant ?? false]
         }
         return d
     }
@@ -383,7 +388,7 @@ final class MCPServer {
         aendern["neuer_name"] = ["type": "string", "description": "Umbenennen"]
         aendern["tarif_wechseln"] = ["type": "string",
                                      "description": "Upgrade/Downgrade auf diesen Tarif (z. B. Max). Neuen Preis in betrag mitgeben. Wird im Verlauf als Tarifwechsel festgehalten."]
-        aendern["tarif_ab"] = ["type": "string", "description": "Nur mit tarif_wechseln: ab wann, JJJJ-MM-TT (Standard heute, nicht in der Zukunft)"]
+        aendern["tarif_ab"] = ["type": "string", "description": "Nur mit tarif_wechseln: ab wann, JJJJ-MM-TT (Standard heute). In der Zukunft = geplanter Wechsel, z. B. Downgrade zum Ende der Laufzeit; bis dahin bleiben Tarif, Preis und Name."]
         let lesen: [String: Any] = ["readOnlyHint": true, "destructiveHint": false]
         return [
             ["name": "abos_auflisten",

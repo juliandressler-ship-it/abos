@@ -2,7 +2,8 @@ import SwiftUI
 
 /// Upgrade oder Downgrade eines Abos, z. B. Claude Pro → Claude Max.
 /// Neuer Tarif, neuer Preis und ab wann – der Verlauf hält den Wechsel fest,
-/// der Kostenverlauf rechnet ab diesem Tag mit dem neuen Preis.
+/// der Kostenverlauf rechnet ab diesem Tag mit dem neuen Preis. Liegt „Ab“ in der
+/// Zukunft (z. B. Downgrade zum Ende der Laufzeit), wird der Wechsel geplant.
 struct TarifWechselBlatt: View {
     @Bindable var abo: Abo
     @Environment(\.dismiss) private var dismiss
@@ -20,6 +21,12 @@ struct TarifWechselBlatt: View {
     }
 
     private var bisherFest: Bool { !abo.tarif.isEmpty }
+    /// „Ab“ liegt nach heute: Wechsel wird nur geplant
+    private var istGeplant: Bool { Kalender.de.startOfDay(for: ab) > Kalender.de.startOfDay(for: Date()) }
+    /// Tag der nächsten Verlängerung – typischer Termin für ein Downgrade
+    private var naechsteVerlaengerung: Date? {
+        abo.naechstesEnde().flatMap { $0 > Date() ? Kalender.de.startOfDay(for: $0) : nil }
+    }
     private var neuBereinigt: String { neu.trimmingCharacters(in: .whitespaces) }
     private var intervallText: String { abo.intervall.titel.lowercased() }
 
@@ -102,14 +109,25 @@ struct TarifWechselBlatt: View {
                 }
                 GridRow {
                     Text("Ab").foregroundStyle(.secondary)
-                    DatePicker("Ab", selection: $ab, in: Format.datumsBereich.lowerBound...Date(), displayedComponents: .date)
-                        .labelsHidden()
-                        .fixedSize()
+                    HStack(spacing: 8) {
+                        DatePicker("Ab", selection: $ab, in: Format.datumsBereich, displayedComponents: .date)
+                            .labelsHidden()
+                            .fixedSize()
+                        if let n = naechsteVerlaengerung, !Kalender.de.isDate(ab, inSameDayAs: n) {
+                            Button("Zur nächsten Verlängerung") { ab = n }
+                                .buttonStyle(.link)
+                                .help("Ab \(Format.datum(n)) – z. B. für ein Downgrade zum Ende der Laufzeit")
+                        } else if !Kalender.de.isDateInToday(ab) {
+                            Button("Heute") { ab = Date() }
+                                .buttonStyle(.link)
+                        }
+                    }
                 }
                 if let vorschlag = namensVorschlag {
                     GridRow {
                         Text("Name").foregroundStyle(.secondary)
-                        Toggle("In „\(vorschlag)“ umbenennen", isOn: $nameAnpassen)
+                        Toggle(istGeplant ? String(localized: "Ab dann „\(vorschlag)“ heißen")
+                                          : String(localized: "In „\(vorschlag)“ umbenennen"), isOn: $nameAnpassen)
                     }
                 }
             }
@@ -121,7 +139,7 @@ struct TarifWechselBlatt: View {
                 Spacer()
                 Button("Abbrechen") { dismiss() }
                     .keyboardShortcut(.cancelAction)
-                Button("Wechseln") { wechseln() }
+                Button(istGeplant ? String(localized: "Wechsel planen") : String(localized: "Wechseln")) { wechseln() }
                     .keyboardShortcut(.defaultAction)
                     .disabled(!kannWechseln)
             }
@@ -138,15 +156,20 @@ struct TarifWechselBlatt: View {
     private var zusammenfassung: some View {
         if let d = differenzProMonat, abs(d) >= 0.005 {
             let hoch = d > 0
-            Label {
-                Text(hoch ? String(localized: "Upgrade") : String(localized: "Downgrade")).fontWeight(.medium)
-                    + Text(" · \(hoch ? "+" : "−")\(Format.euro(abs(d))) \(String(localized: "pro Monat"))")
-                    .foregroundStyle(.secondary)
-            } icon: {
-                Image(systemName: hoch ? "arrow.up.circle.fill" : "arrow.down.circle.fill")
-                    .foregroundStyle(hoch ? Color.orange : Color.green)
+            VStack(alignment: .leading, spacing: 4) {
+                Label {
+                    Text(hoch ? String(localized: "Upgrade") : String(localized: "Downgrade")).fontWeight(.medium)
+                        + Text(" · \(hoch ? "+" : "−")\(Format.euro(abs(d))) \(String(localized: "pro Monat"))")
+                        .foregroundStyle(.secondary)
+                } icon: {
+                    Image(systemName: hoch ? "arrow.up.circle.fill" : "arrow.down.circle.fill")
+                        .foregroundStyle(hoch ? Color.orange : Color.green)
+                }
+                .monospacedDigit()
+                if istGeplant { geplantHinweis }
             }
-            .monospacedDigit()
+        } else if istGeplant {
+            geplantHinweis
         } else {
             Text("Der Wechsel steht danach mit Datum im Verlauf, der Kostenverlauf rechnet ab dann mit dem neuen Preis.")
                 .font(.caption)
@@ -155,12 +178,21 @@ struct TarifWechselBlatt: View {
         }
     }
 
+    /// Erklärt, was bei einem Datum in der Zukunft passiert
+    private var geplantHinweis: some View {
+        let ersetzt = abo.geplanterWechsel.map { String(localized: " Ersetzt den bisher geplanten Wechsel zu \($0.tarif ?? "") am \(Format.datum($0.datum)).") } ?? ""
+        return Text(String(localized: "Bis \(Format.datum(Kalender.de.date(byAdding: .day, value: -1, to: ab) ?? ab)) bleibt alles wie jetzt, ab \(Format.datum(ab)) stellt Abos automatisch um.") + ersetzt)
+            .font(.caption)
+            .foregroundStyle(.secondary)
+            .fixedSize(horizontal: false, vertical: true)
+    }
+
     private func wechseln() {
         let cal = Kalender.de
         // Heute: jetziger Zeitpunkt, damit der Eintrag nach allem steht, was heute schon passiert ist
         let zeitpunkt = cal.isDateInToday(ab) ? Date() : cal.startOfDay(for: ab)
-        if nameAnpassen, let vorschlag = namensVorschlag { abo.name = vorschlag }
-        abo.tarifWechseln(von: bisher, zu: neuBereinigt, betrag: preis, ab: zeitpunkt)
+        let neuerName = nameAnpassen ? namensVorschlag : nil
+        abo.tarifWechseln(von: bisher, zu: neuBereinigt, betrag: preis, ab: zeitpunkt, neuerName: neuerName)
         dismiss()
     }
 }

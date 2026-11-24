@@ -267,6 +267,10 @@ extension Abo {
     /// Betrag pro Zahlung, der an einem Tag galt (aus den Preisänderungen im Verlauf)
     func betrag(am tag: Date) -> Double? {
         let aenderungen = verlauf.filter { $0.art == .preis || $0.art == .tarif }.sorted { $0.datum < $1.datum }
+        // Ein geplanter Wechsel, der an diesem Tag schon gilt: sein Preis
+        if let geplant = aenderungen.last(where: { $0.geplant == true && $0.datum <= tag }) {
+            return geplant.betrag
+        }
         // Die erste Änderung nach dem Tag verrät, was vorher galt
         if let naechste = aenderungen.first(where: { $0.datum > tag }) {
             return naechste.alterBetrag ?? betrag
@@ -276,16 +280,67 @@ extension Abo {
 
     /// Tarif wechseln (Upgrade oder Downgrade): neuer Tarif und Preis gelten ab `datum`,
     /// der Verlauf hält fest, von welchem Tarif und Preis gewechselt wurde
+    /// Liegt `datum` nach heute, wird der Wechsel nur geplant: bis dahin bleiben Tarif, Preis und Name,
+    /// am Tag selbst stellt `geplanteWechselAnwenden()` um. Ein neuer Plan ersetzt einen älteren.
     func tarifWechseln(von alt: String, zu neu: String, betrag neuerBetrag: Double?, ab datum: Date,
-                       quelle: VerlaufEintrag.Quelle = .app) {
-        let alterBetrag = betrag(am: datum)
+                       neuerName: String? = nil, quelle: VerlaufEintrag.Quelle = .app) {
+        let cal = Kalender.de
         let alt = alt.trimmingCharacters(in: .whitespaces)
         let neu = neu.trimmingCharacters(in: .whitespaces)
-        tarif = neu
-        betrag = neuerBetrag
-        protokollieren(VerlaufEintrag(datum: datum, art: .tarif, quelle: quelle, betrag: neuerBetrag,
-                                      alterBetrag: alterBetrag, intervall: intervallRaw,
-                                      tarif: neu, alterTarif: alt.isEmpty ? nil : alt))
+        let geplant = cal.startOfDay(for: datum) > cal.startOfDay(for: Date())
+        if geplant {
+            // Ältere Pläne verwerfen – es gibt immer höchstens einen geplanten Wechsel
+            verlaufSpeichern(verlauf.filter { $0.geplant != true })
+        }
+        let alterBetrag = betrag(am: datum)
+        if !geplant {
+            tarif = neu
+            betrag = neuerBetrag
+            if let neuerName, !neuerName.isEmpty { name = neuerName }
+        }
+        protokollieren(VerlaufEintrag(datum: geplant ? cal.startOfDay(for: datum) : datum, art: .tarif, quelle: quelle,
+                                      betrag: neuerBetrag, alterBetrag: alterBetrag, intervall: intervallRaw,
+                                      tarif: neu, alterTarif: alt.isEmpty ? nil : alt,
+                                      geplant: geplant ? true : nil, neuerName: geplant ? neuerName : nil))
+    }
+
+    /// Der geplante Tarifwechsel, falls es einen gibt
+    var geplanterWechsel: VerlaufEintrag? {
+        verlauf.first { $0.art == .tarif && $0.geplant == true }
+    }
+
+    /// Geplanten Wechsel verwerfen
+    func geplantenWechselAufheben() {
+        verlaufSpeichern(verlauf.filter { $0.geplant != true })
+    }
+
+    /// Fällige geplante Wechsel ausführen: Tarif, Preis und ggf. Name umstellen.
+    /// Gibt true zurück, wenn sich etwas geändert hat.
+    @discardableResult
+    func geplanteWechselAnwenden(jetzt: Date = Date()) -> Bool {
+        var liste = verlauf
+        var geaendert = false
+        for i in liste.indices.reversed() where liste[i].geplant == true && liste[i].datum <= jetzt {
+            tarif = liste[i].tarif ?? tarif
+            betrag = liste[i].betrag
+            if let n = liste[i].neuerName, !n.isEmpty { name = n }
+            liste[i].geplant = nil
+            liste[i].neuerName = nil
+            geaendert = true
+        }
+        if geaendert { verlaufSpeichern(liste) }
+        return geaendert
+    }
+
+    /// Für alle Abos: fällige geplante Wechsel ausführen; true, wenn gespeichert wurde
+    @MainActor
+    @discardableResult
+    static func geplanteWechselAnwenden(context: ModelContext) -> Bool {
+        let abos = (try? context.fetch(FetchDescriptor<Abo>())) ?? []
+        var geaendert = false
+        for a in abos where a.geplanteWechselAnwenden() { geaendert = true }
+        if geaendert { try? context.save() }
+        return geaendert
     }
 
     /// Tarife, die das Abo schon hatte (ohne den aktuellen), jeweils mit dem zuletzt gültigen Preis –
@@ -294,7 +349,7 @@ extension Abo {
         var preise: [String: Double?] = [:]
         var reihenfolge: [String] = []
         // Älteste zuerst, damit am Ende der jüngste Preis je Tarif übrig bleibt
-        for e in verlauf.reversed() where e.art == .tarif {
+        for e in verlauf.reversed() where e.art == .tarif && e.geplant != true {
             for (name, preis) in [(e.alterTarif, e.alterBetrag), (e.tarif, e.betrag)] {
                 guard let name, !name.isEmpty else { continue }
                 if preise[name] == nil { reihenfolge.append(name) }
@@ -491,6 +546,10 @@ struct VerlaufEintrag: Codable, Identifiable, Hashable {
     /// Nur bei „Tarif gewechselt“: neuer und bisheriger Tarif
     var tarif: String? = nil
     var alterTarif: String? = nil
+    /// Nur bei „Tarif gewechselt“: true, solange der Wechsel noch in der Zukunft liegt
+    var geplant: Bool? = nil
+    /// Geplanter Wechsel: Name, den das Abo ab dann tragen soll
+    var neuerName: String? = nil
 
     /// Bei einem Tarifwechsel: true = teurer (Upgrade), false = günstiger (Downgrade), nil = gleich oder unbekannt
     var istUpgrade: Bool? {
@@ -500,6 +559,13 @@ struct VerlaufEintrag: Codable, Identifiable, Hashable {
 
     /// Überschrift in der Zeitleiste
     var titel: String {
+        if geplant == true {
+            switch istUpgrade {
+            case true?: return String(localized: "Upgrade geplant")
+            case false?: return String(localized: "Downgrade geplant")
+            case nil: return String(localized: "Tarifwechsel geplant")
+            }
+        }
         switch istUpgrade {
         case true?: return String(localized: "Upgrade")
         case false?: return String(localized: "Downgrade")
@@ -509,9 +575,9 @@ struct VerlaufEintrag: Codable, Identifiable, Hashable {
 
     var symbol: String {
         switch istUpgrade {
-        case true?: return "arrow.up.circle"
-        case false?: return "arrow.down.circle"
-        case nil: return art.symbol
+        case true?: return geplant == true ? "calendar.badge.clock" : "arrow.up.circle"
+        case false?: return geplant == true ? "calendar.badge.clock" : "arrow.down.circle"
+        case nil: return geplant == true ? "calendar.badge.clock" : art.symbol
         }
     }
 

@@ -203,6 +203,7 @@ struct ContentView: View {
         .onAppear {
             context.undoManager = undoManager
             Fokus.startFokusLoesen()
+            Abo.geplanteWechselAnwenden(context: context)
             // Klick neben die markierten Abos der Übersicht hebt die Auswahl auf
             Fokus.auswahlAufheben = { if auswahl == nil && !markiert.isEmpty { auswahlAufheben() } }
         }
@@ -245,7 +246,10 @@ struct ContentView: View {
         .task { await Mitteilungen.berechtigungAnfragen() }
         .task(id: planSignatur) { Mitteilungen.planen(context: context) }
         .onChange(of: scenePhase) { _, neu in
-            if neu == .active { Mitteilungen.planen(context: context) }
+            if neu == .active {
+                Abo.geplanteWechselAnwenden(context: context)
+                Mitteilungen.planen(context: context)
+            }
         }
     }
 
