@@ -18,8 +18,7 @@ enum StandardErinnerung {
     static let uhrzeitSchluessel = "erinnerungUhrzeit"
 
     static func registrieren() {
-        UserDefaults.standard.register(defaults: [ersteSchluessel: 0, zweiteSchluessel: -1, uhrzeitSchluessel: 9 * 60,
-                                                  Hintergrund.aktivSchluessel: true])
+        UserDefaults.standard.register(defaults: [ersteSchluessel: 0, zweiteSchluessel: -1, uhrzeitSchluessel: 9 * 60])
     }
 
     static var uhrzeit: (stunde: Int, minute: Int) {
@@ -51,7 +50,7 @@ enum Mitteilungen {
     static let kategorieID = "ABO_FRIST"
     /// So viele kommende Kündigungsfristen pro Abo werden berücksichtigt
     static let fristenVoraus = 3
-    /// Merkzettel in den Einstellungen der App (auch die Hintergrund-Prüfung liest und schreibt sie)
+    /// Merkzettel in den Einstellungen der App
     static let geplantSchluessel = "mitteilungEingeplant"
     static let geprueftSchluessel = "mitteilungenGeprueftBis"
     static let zugestelltSchluessel = "mitteilungenZugestellt"
@@ -147,7 +146,7 @@ enum Mitteilungen {
 
     /// Plant die nächste fällige Erinnerung bei macOS ein, damit sie pünktlich kommt.
     /// macOS behält für Abos nur eine geplante Mitteilung – alle weiteren stellt die
-    /// Hintergrund-Prüfung zu, sobald sie fällig sind.
+    /// laufende App zu, sobald sie fällig sind (siehe Hintergrund).
     @MainActor
     static func planen(context: ModelContext) {
         let center = UNUserNotificationCenter.current()
@@ -162,15 +161,12 @@ enum Mitteilungen {
         UserDefaults.standard.set(naechster.id, forKey: geplantSchluessel)
     }
 
-    /// Hintergrund-Prüfung: alles zustellen, was seit der letzten Prüfung fällig wurde und noch nicht
+    /// Regelmäßige Prüfung der laufenden App: alles zustellen, was seit der letzten Prüfung fällig wurde und noch nicht
     /// gekommen ist, dann die nächste Erinnerung einplanen. Verpasste Erinnerungen (Mac aus) kommen
     /// nachträglich, solange ihre Frist noch nicht vorbei ist.
     @MainActor
     static func pruefen(context: ModelContext) async {
-        if Abo.geplanteWechselAnwenden(context: context) {
-            DistributedNotificationCenter.default().postNotificationName(Datenbank.geaendert, object: nil, userInfo: nil,
-                                                                         deliverImmediately: true)
-        }
+        Abo.geplanteWechselAnwenden(context: context)
         let d = UserDefaults.standard
         let cal = Kalender.de
         let center = UNUserNotificationCenter.current()
@@ -200,8 +196,6 @@ enum Mitteilungen {
         d.set(Array(zugestellt.suffix(300)), forKey: zugestelltSchluessel)
         d.set(jetzt, forKey: geprueftSchluessel)
         planen(context: context)
-        // Der Auftrag an macOS läuft asynchron; kurz warten, bevor sich der Prozess beendet
-        try? await Task.sleep(for: .seconds(1))
     }
 
     /// Text der Mitteilung; „noch … Tage“ zählt ab dem Tag, an dem sie erscheint

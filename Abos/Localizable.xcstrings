@@ -2131,6 +2131,7 @@
       }
     },
     "Die Hintergrund-Prüfung schaut alle 15 Minuten nach fälligen Erinnerungen – auch wenn Abos geschlossen ist. Was verpasst wurde, weil der Mac aus war, kommt nachträglich. Damit die Buttons „Erledigt“, „Gekündigt“ und „In 1 Woche erneut“ immer sichtbar sind, in den Systemeinstellungen für Abos den Stil „Hinweise“ wählen.": {
+      "extractionState": "stale",
       "localizations": {
         "de": {
           "stringUnit": {
@@ -3028,6 +3029,7 @@
       }
     },
     "Hintergrund-Prüfung": {
+      "extractionState": "stale",
       "localizations": {
         "de": {
           "stringUnit": {
@@ -3092,6 +3094,7 @@
       }
     },
     "Im Hintergrund prüfen": {
+      "extractionState": "stale",
       "localizations": {
         "de": {
           "stringUnit": {
@@ -3204,6 +3207,7 @@
       }
     },
     "In den Systemeinstellungen erlauben": {
+      "extractionState": "stale",
       "localizations": {
         "de": {
           "stringUnit": {
@@ -5092,6 +5096,22 @@
         }
       }
     },
+    "Solange Abos läuft – auch mit geschlossenem Fenster –, schaut die App alle 15 Minuten nach fälligen Erinnerungen; was verpasst wurde, kommt nachträglich. Die nächste Erinnerung kommt auch, wenn Abos beendet ist. Damit die Buttons „Erledigt“, „Gekündigt“ und „In 1 Woche erneut“ immer sichtbar sind, in den Systemeinstellungen für Abos den Stil „Hinweise“ wählen.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Solange Abos läuft – auch mit geschlossenem Fenster –, schaut die App alle 15 Minuten nach fälligen Erinnerungen; was verpasst wurde, kommt nachträglich. Die nächste Erinnerung kommt auch, wenn Abos beendet ist. Damit die Buttons „Erledigt“, „Gekündigt“ und „In 1 Woche erneut“ immer sichtbar sind, in den Systemeinstellungen für Abos den Stil „Hinweise“ wählen."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "While Abos is running – even with its window closed – it checks for due reminders every 15 minutes; missed ones arrive afterwards. The next reminder arrives even when Abos has quit. To always see the “Done”, “Cancelled” and “Remind in 1 week” buttons, choose the “Alerts” style for Abos in System Settings."
+          }
+        }
+      }
+    },
     "Sonstiges": {
       "localizations": {
         "de": {
@@ -6950,6 +6970,7 @@
       }
     },
     "konnte nicht gestartet werden": {
+      "extractionState": "stale",
       "localizations": {
         "de": {
           "stringUnit": {

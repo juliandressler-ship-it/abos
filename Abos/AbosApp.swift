@@ -29,7 +29,8 @@ enum Start {
         StandardErinnerung.registrieren()
         MainActor.assumeIsolated {
             if CommandLine.arguments.contains("--erinnern") {
-                Hintergrund.laufen()
+                // Aufruf des früheren Hintergrunddienstes (Version 1.5): nichts mehr zu tun
+                exit(0)
             } else if CommandLine.arguments.contains("--mcp") {
                 MCPServer().laufen()
             } else {
@@ -78,8 +79,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        MainActor.assumeIsolated { Fokus.einrichten() }
-        Hintergrund.einrichten()
+        MainActor.assumeIsolated {
+            Fokus.einrichten()
+            Hintergrund.starten()
+        }
     }
 
     /// Wie bei anderen Mac-Apps: Fenster schließen lässt die App im Dock weiterlaufen, ⌘Q beendet sie
@@ -115,8 +118,6 @@ struct EinstellungenView: View {
     @AppStorage(StandardErinnerung.zweiteSchluessel) private var zweite = -1
     @AppStorage(StandardErinnerung.uhrzeitSchluessel) private var uhrzeit = 9 * 60
     @State private var berechtigung = "…"
-    @AppStorage(Hintergrund.aktivSchluessel) private var hintergrund = true
-    @State private var dienst = Hintergrund.zustand
     @State private var naechste: String?
     @AppStorage(Sicherung.letztesBackupSchluessel) private var letztesBackup: Double = 0
 
@@ -139,23 +140,6 @@ struct EinstellungenView: View {
             }
             Section("macOS-Mitteilungen") {
                 LabeledContent("Berechtigung", value: berechtigung)
-                Toggle("Im Hintergrund prüfen", isOn: $hintergrund)
-                    .onChange(of: hintergrund) {
-                        Hintergrund.einrichten()
-                        dienst = Hintergrund.zustand
-                    }
-                if hintergrund {
-                    switch dienst {
-                    case .aktiv:
-                        EmptyView()
-                    case .freigabeNoetig:
-                        LabeledContent("Hintergrund-Prüfung") {
-                            Button("In den Systemeinstellungen erlauben") { Hintergrund.freigabeOeffnen() }
-                        }
-                    case .aus, .fehlt:
-                        LabeledContent("Hintergrund-Prüfung", value: String(localized: "konnte nicht gestartet werden"))
-                    }
-                }
                 LabeledContent("Nächste Erinnerung", value: naechste ?? String(localized: "keine"))
                 HStack {
                     Button("Testmitteilung senden") { Mitteilungen.testSenden() }
@@ -165,7 +149,7 @@ struct EinstellungenView: View {
                         }
                     }
                 }
-                Text("Die Hintergrund-Prüfung schaut alle 15 Minuten nach fälligen Erinnerungen – auch wenn Abos geschlossen ist. Was verpasst wurde, weil der Mac aus war, kommt nachträglich. Damit die Buttons „Erledigt“, „Gekündigt“ und „In 1 Woche erneut“ immer sichtbar sind, in den Systemeinstellungen für Abos den Stil „Hinweise“ wählen.")
+                Text("Solange Abos läuft – auch mit geschlossenem Fenster –, schaut die App alle 15 Minuten nach fälligen Erinnerungen; was verpasst wurde, kommt nachträglich. Die nächste Erinnerung kommt auch, wenn Abos beendet ist. Damit die Buttons „Erledigt“, „Gekündigt“ und „In 1 Woche erneut“ immer sichtbar sind, in den Systemeinstellungen für Abos den Stil „Hinweise“ wählen.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -189,14 +173,9 @@ struct EinstellungenView: View {
         .fixedSize(horizontal: false, vertical: true)
         .task {
             berechtigung = await Mitteilungen.berechtigungText()
-            dienst = Hintergrund.zustand
             if let t = Mitteilungen.termine(context: Datenbank.container.mainContext, ab: Date()).first {
                 naechste = "\(Format.datumUhrzeit(t.datum)) · \(t.name)"
             }
-        }
-        // Nach dem Erlauben in den Systemeinstellungen den Zustand neu lesen
-        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
-            dienst = Hintergrund.zustand
         }
     }
 
